@@ -29,8 +29,15 @@ customer profile history, internal notes, a small metrics panel, search, and CSV
    cp web/.env.example web/.env
    ```
 
-   The defaults run the app fully offline — the Summarize feature uses a built-in canned
-   summarizer (`FAKE_LLM=true`), so no API key is required.
+   Generate a local signing key once with `openssl rand -hex 32` and save its output as
+   `JWT_SECRET` in `server/.env`. The API requires a non-placeholder secret of at least
+   32 bytes in every environment and refuses to start without one. Never commit this key.
+
+   Restart the API after changing the key. Previously issued tokens (including tokens
+   signed with the old demo key) will no longer work; sign out and sign in again.
+
+   The app runs fully offline — the Summarize feature uses a built-in canned
+   summarizer (`FAKE_LLM=true`), so no provider API key is required.
 
 3. Seed the database with sample users, customers, and feedback:
 

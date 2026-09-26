@@ -38,10 +38,11 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 
 - Implement one agreed batch at a time. The security batch plan is in `tickets/security-batches.md`; related tickets may share a fix, but nearby findings do not automatically expand the batch.
 - Preserve `server/src/seed.ts`, sample credentials, seeded content, and the existing database. Do not reseed the working database or introduce data cleanup/schema migrations for these batches. Use disposable databases for mutation checks.
+- Work with test data only for now. A004 covers credential disclosure; real-account password hashing, account migration/reset paths and credential rotation were removed from the ticket backlog at the user’s request. Do not reintroduce them without a new explicit request.
 - Keep the existing demo login and bearer-token architecture. Fix token verification, signing-key configuration, and credential disclosure without adding password hashing (including Argon2/bcrypt), registration, password reset, refresh tokens, a session service, or new role/privacy policies unless separately requested.
 - Enforce request types and referenced-record existence in the API using small helpers and parameterized SQL. Do not introduce an ORM, generic validation framework, or database-constraint migration for this scope.
 - Separate current defects from deployment preparation. Do not add hosting infrastructure, distributed rate limiting, or production-only policies without an agreed need.
-- When only part of a ticket is in scope (especially A004 and A010), record completed checks and explicitly deferred requirements. Keep the ticket/index status aligned and do not mark the original ticket fully Done while its requirements remain deferred. Preserve the original audit reports.
+- When only part of a ticket is in scope (especially A010), record completed checks and explicitly deferred requirements. Keep the ticket/index status aligned and do not mark the original ticket fully Done while its requirements remain deferred. Preserve the original audit reports.
 
 ## Design System
 
@@ -62,6 +63,8 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 ## Security & Configuration
 
 Copy `server/.env.example` and `web/.env.example` to local `.env` files; never commit secrets. Treat the seeded credentials and current auth setup as development-only. Use parameterized SQL for new queries, especially when incorporating request data.
+
+`server/src/config.ts` loads and validates `JWT_SECRET` once at startup. Generate a local key with `openssl rand -hex 32`; missing, placeholder or shorter-than-32-byte secrets prevent API startup in every environment. Signing and verification use HS256, and authentication resolves the current public user from the database. Key changes require a restart and fresh login. CSV export still accepts a verified query token until batch 4.
 
 ## Commits, Pull Requests & Guide Maintenance
 
