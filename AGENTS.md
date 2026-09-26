@@ -55,6 +55,7 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 ## Existing Workflow Findings
 
 - Inbox pagination currently skips the first ten records (`offset = page * PAGE_SIZE` in the API) and returns an unfiltered total. Treat inaccurate page counts as an API issue, not a table styling issue.
+- Assignment and note saves now catch API failures, show local inline alerts and retain entered values on failure; broader error recovery remains in A015/B06.
 - The inbox polling effect captures the initial filter/search/page values. Its 45-second refresh can replace filtered results with the initial query. This is separate from visual state styling.
 - The 2026-09-26 audit is indexed in `app_audit_report.md`, with separate security, functional, UX, and design/accessibility reports. Findings are a snapshot of revision `12566cc`; verify whether each issue still exists before acting on it.
 - Audit evidence and screenshots are local, ignored files under `output/playwright/`. Security and state-changing reproductions used a disposable seeded copy; do not run those probes or reseed a database that must be retained. No permanent test runner was added.

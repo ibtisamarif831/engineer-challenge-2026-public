@@ -15,10 +15,11 @@ type AssignmentFieldsProps = {
   onPriorityChange: (value: FeedbackPriority) => void
   onDueDateChange: (value: string) => void
   onSave: () => void
+  error: string
 }
 
 export default function AssignmentFields({
-  users, assigneeId, priority, dueAt, onAssigneeChange, onPriorityChange, onDueDateChange, onSave,
+  users, assigneeId, priority, dueAt, onAssigneeChange, onPriorityChange, onDueDateChange, onSave, error,
 }: AssignmentFieldsProps) {
   return (
     <section className="assignment-section" aria-labelledby="assignment-heading">
@@ -51,6 +52,7 @@ export default function AssignmentFields({
         </Field>
         <Button onClick={onSave}>Save assignment</Button>
       </div>
+      {error && <div className="error" role="alert">{error}</div>}
     </section>
   )
 }

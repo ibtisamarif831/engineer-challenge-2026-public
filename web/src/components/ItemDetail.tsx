@@ -35,6 +35,8 @@ export default function ItemDetail({
   const [dueAt, setDueAt] = useState('')
   const [noteBody, setNoteBody] = useState('')
   const [privateNote, setPrivateNote] = useState(true)
+  const [assignmentError, setAssignmentError] = useState('')
+  const [noteError, setNoteError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -81,23 +83,33 @@ export default function ItemDetail({
 
   const onSaveAssignment = async () => {
     if (!item) return
-    const updated = await updateAssignment(
-      item.id,
-      {
-        assignee_id: assigneeId ? Number(assigneeId) : null,
-        priority,
-        due_at: dueAt,
-      },
-      token
-    )
-    setItem(updated)
+    setAssignmentError('')
+    try {
+      const updated = await updateAssignment(
+        item.id,
+        {
+          assignee_id: assigneeId ? Number(assigneeId) : null,
+          priority,
+          due_at: dueAt,
+        },
+        token
+      )
+      setItem(updated)
+    } catch {
+      setAssignmentError('Unable to save assignment. Please try again.')
+    }
   }
 
   const onAddNote = async () => {
     if (!noteBody.trim()) return
-    const note = await addNote(id, { body: noteBody, is_private: privateNote }, token)
-    setNotes([note, ...notes])
-    setNoteBody('')
+    setNoteError('')
+    try {
+      const note = await addNote(id, { body: noteBody, is_private: privateNote }, token)
+      setNotes([note, ...notes])
+      setNoteBody('')
+    } catch {
+      setNoteError('Unable to add note. Your draft is kept; please try again.')
+    }
   }
 
   if (!item) {
@@ -139,6 +151,7 @@ export default function ItemDetail({
             onPriorityChange={setPriority}
             onDueDateChange={setDueAt}
             onSave={onSaveAssignment}
+            error={assignmentError}
           />
           <div className="detail-actions">
             <Button variant="primary" onClick={onResolve}>
@@ -166,6 +179,7 @@ export default function ItemDetail({
             onBodyChange={setNoteBody}
             onPrivateChange={setPrivateNote}
             onAdd={onAddNote}
+            error={noteError}
           />
         </aside>
       </div>

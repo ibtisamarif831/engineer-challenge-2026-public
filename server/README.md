@@ -8,6 +8,7 @@ opening a database or listening. The entry point supplies the live dependencies.
 src/
   index.ts            Process entry point
   app.ts              Express configuration and dependency wiring
+  config.ts           Required server-only JWT signing configuration
   routes/             URL/method mappings and middleware ordering
   controllers/        Parse HTTP input, call services, send typed responses
   services/           Business operations, SQL and feedback serialization
@@ -55,11 +56,10 @@ the remaining security/deployment tickets.
 
 ## Scope still open
 
-This is a server structure/type refactor, with directly related input and response fixes.
-Authentication still decodes JWTs without verifying signatures and uses the existing
-hardcoded demo signing key (A001/A005). Identity shape checking does not authenticate a
-caller. The root README remains the source of truth for local setup; signing-key changes are
-outside the current scope. Password hashing, schema
-constraints/migrations, browser error recovery, pagination/count corrections, metric date
+Authentication verifies HS256 signatures, expiry and identity claims using the required
+configured signing key, then resolves the current user from the database. The root README
+documents key setup, restart and fresh login. Real-account work has been removed from
+the test-data-only backlog at the user's request. Schema constraints/migrations,
+broader browser error recovery, pagination/count corrections, metric date
 scope alignment, token-free CSV transport/formula protection, and summary deadlines remain
 separate tickets. This refactor does not establish production readiness.
