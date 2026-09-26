@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { exportFeedbackUrl, fetchInbox, fetchMetrics, toggleResolve } from '../api'
 import { FeedbackItem, Metrics } from '../types'
 import ItemDetail from './ItemDetail'
+import FeedbackTable from './inbox/FeedbackTable'
+import InboxToolbar from './inbox/InboxToolbar'
+import MetricsStrip from './inbox/MetricsStrip'
+import Pagination from './ui/Pagination'
 
 const PAGE_SIZE = 10
 
@@ -67,146 +71,26 @@ export default function Inbox({ token }: { token: string }) {
         <h1>Inbox</h1>
         <span className="muted">Customer feedback</span>
       </div>
-      {metrics && (
-        <div className="metrics-strip panel">
-          <div>
-            <strong>{metrics.open}</strong>
-            <span>Open</span>
-          </div>
-          <div>
-            <strong>{metrics.resolved}</strong>
-            <span>Resolved</span>
-          </div>
-          <div>
-            <strong>{metrics.urgent}</strong>
-            <span>Urgent</span>
-          </div>
-          <div>
-            <strong>{metrics.overdue}</strong>
-            <span>Overdue</span>
-          </div>
-        </div>
-      )}
+      {metrics && <MetricsStrip metrics={metrics} />}
       <section className="panel" aria-label="Feedback inbox">
-        <div className="toolbar">
-          <div className="filters" role="group" aria-label="Filter by status">
-            {['all', 'open', 'resolved'].map((f) => (
-              <button
-                key={f}
-                className={'button filter-button' + (filter === f ? ' active' : '')}
-                aria-pressed={filter === f}
-                onClick={() => {
-                  setFilter(f)
-                  setPage(1)
-                }}
-              >
-                {f[0].toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-          <label className="search-field">
-            <span className="sr-only">Search feedback</span>
-            <input
-              className="input"
-              type="search"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              placeholder="Search feedback…"
-            />
-          </label>
-          <button
-            className="button export-button"
-            onClick={() => {
-              window.location.href = exportFeedbackUrl(filter, search, token)
-            }}
-          >
-            Export CSV
-          </button>
-        </div>
-
-        <div className="table-scroll" role="region" aria-label="Feedback tickets, scroll horizontally for all columns" tabIndex={0}>
-          <table className="feedback-table">
-            <caption className="sr-only">Customer feedback tickets</caption>
-            <thead>
-              <tr>
-                <th scope="col">Customer</th>
-                <th scope="col">Channel</th>
-                <th scope="col">Priority</th>
-                <th scope="col">Message</th>
-                <th scope="col">Owner</th>
-                <th scope="col">Status</th>
-                <th scope="col">Due</th>
-                <th scope="col"><span className="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="row" onClick={() => setSelectedId(item.id)}>
-                  <td>
-                    <button
-                      className="ticket-button"
-                      aria-label={`Open ticket ${item.id} from ${item.customer_name}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedId(item.id)
-                      }}
-                    >
-                      {item.customer_name}
-                    </button>
-                  </td>
-                  <td>
-                    <span className="channel">{item.channel}</span>
-                  </td>
-                  <td>
-                    <span className={'priority ' + item.priority}>{item.priority}</span>
-                  </td>
-                  <td className="preview">
-                    {item.message.slice(0, 70)}
-                    {item.message.length > 70 ? '…' : ''}
-                  </td>
-                  <td>{item.assignee_name || 'Unassigned'}</td>
-                  <td>
-                    <span className={'badge ' + item.status}>{item.status}</span>
-                  </td>
-                  <td className="due">{item.due_at ? new Date(item.due_at).toLocaleDateString() : 'No due date'}</td>
-                  <td>
-                    <button
-                      className="button button-quiet row-action"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onResolve(item)
-                      }}
-                    >
-                      {item.status === 'open' ? 'Resolve' : 'Reopen'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {items.length === 0 && (
-          <div className="empty-state" role="status">
-            <p><strong>No feedback to display</strong></p>
-            <p>Try another search or status filter.</p>
-          </div>
-        )}
+        <InboxToolbar
+          filter={filter}
+          search={search}
+          onFilterChange={(value) => {
+            setFilter(value)
+            setPage(1)
+          }}
+          onSearchChange={(value) => {
+            setSearch(value)
+            setPage(1)
+          }}
+          onExport={() => {
+            window.location.href = exportFeedbackUrl(filter, search, token)
+          }}
+        />
+        <FeedbackTable items={items} onOpen={setSelectedId} onResolve={onResolve} />
       </section>
-
-      <nav className="pager" aria-label="Inbox pagination">
-        <button className="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-          Previous
-        </button>
-        <span>
-          Page {page} of {totalPages}
-        </span>
-        <button className="button" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-          Next
-        </button>
-      </nav>
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} label="Inbox pagination" />
     </div>
   )
 }

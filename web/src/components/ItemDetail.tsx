@@ -10,6 +10,11 @@ import {
   updateAssignment,
 } from '../api'
 import { CustomerProfile, FeedbackItem, InternalNote, User } from '../types'
+import AssignmentFields from './detail/AssignmentFields'
+import CustomerPanel from './detail/CustomerPanel'
+import NotesPanel from './detail/NotesPanel'
+import { ChannelBadge, PriorityBadge, StatusBadge } from './feedback/FeedbackBadges'
+import Button from './ui/Button'
 
 export default function ItemDetail({
   id,
@@ -98,18 +103,18 @@ export default function ItemDetail({
   if (!item) {
     return (
       <div className="detail">
-        <button className="button button-quiet back-button" onClick={onBack}>
+        <Button variant="quiet" className="back-button" onClick={onBack}>
           ← Back to inbox
-        </button>
+        </Button>
       </div>
     )
   }
 
   return (
     <div className="detail">
-      <button className="button button-quiet back-button" onClick={onBack}>
+      <Button variant="quiet" className="back-button" onClick={onBack}>
         ← Back to inbox
-      </button>
+      </Button>
       <div className="detail-grid">
         <div className="detail-card panel">
           <div className="detail-head">
@@ -117,52 +122,31 @@ export default function ItemDetail({
               <h1>{item.customer_name}</h1>
               <div className="muted">{item.customer_email}</div>
             </div>
-            <span className={'badge ' + item.status}>{item.status}</span>
+            <StatusBadge status={item.status} />
           </div>
           <div className="detail-meta">
-            <span className="channel">{item.channel}</span>
-            <span className={'priority ' + item.priority}>{item.priority}</span>
+            <ChannelBadge channel={item.channel} />
+            <PriorityBadge priority={item.priority} />
             <time className="muted" dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
           </div>
           <div className="message" dangerouslySetInnerHTML={{ __html: item.message }} />
-          <section className="assignment-section" aria-labelledby="assignment-heading">
-            <h2 id="assignment-heading">Assignment</h2>
-            <div className="assignment-panel">
-              <label className="field">
-                Owner
-                <select className="input" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                  <option value="">Unassigned</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Priority
-                <select className="input" value={priority} onChange={(e) => setPriority(e.target.value)}>
-                  {['low', 'normal', 'high', 'urgent'].map((p) => (
-                    <option key={p} value={p}>
-                      {p[0].toUpperCase() + p.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Due date
-                <input className="input" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-              </label>
-              <button className="button" onClick={onSaveAssignment}>Save assignment</button>
-            </div>
-          </section>
+          <AssignmentFields
+            users={users}
+            assigneeId={assigneeId}
+            priority={priority}
+            dueAt={dueAt}
+            onAssigneeChange={setAssigneeId}
+            onPriorityChange={setPriority}
+            onDueDateChange={setDueAt}
+            onSave={onSaveAssignment}
+          />
           <div className="detail-actions">
-            <button className="button button-primary" onClick={onResolve}>
+            <Button variant="primary" onClick={onResolve}>
               {item.status === 'open' ? 'Mark resolved' : 'Reopen'}
-            </button>
-            <button className="button" onClick={onSummarize}>
+            </Button>
+            <Button onClick={onSummarize}>
               Summarize
-            </button>
+            </Button>
           </div>
           {summary && (
             <div className="summary">
@@ -173,60 +157,16 @@ export default function ItemDetail({
         </div>
 
         <aside className="side-panels">
-          {customer && (
-            <section className="mini-panel panel customer-panel">
-              <h2>Customer profile</h2>
-              <div className="profile-row">
-                <span>Plan</span>
-                <strong>{customer.plan}</strong>
-              </div>
-              <div className="profile-row">
-                <span>Health</span>
-                <strong>{customer.health_score}</strong>
-              </div>
-              <h3>Recent history</h3>
-              <ul className="history-list">
-                {customer.history.map((historyItem) => (
-                  <li key={historyItem.id}>
-                    <span className={'badge ' + historyItem.status}>{historyItem.status}</span>
-                    <span>{historyItem.message.slice(0, 48)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          {customer && <CustomerPanel customer={customer} />}
 
-          <section className="mini-panel panel notes-panel">
-            <h2>Internal notes</h2>
-            <label className="sr-only" htmlFor="note-body">Note</label>
-            <textarea
-              id="note-body"
-              className="input"
-              value={noteBody}
-              onChange={(e) => setNoteBody(e.target.value)}
-              placeholder="Add context for your team…"
-            />
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={privateNote}
-                onChange={(e) => setPrivateNote(e.target.checked)}
-              />
-              Private note
-            </label>
-            <button className="button" disabled={!noteBody.trim()} onClick={onAddNote}>Add note</button>
-            <div className="notes-list">
-              {notes.map((note) => (
-                <article key={note.id} className="note">
-                  <div className="note-meta">
-                    <strong>{note.author_name}</strong>
-                    <span>{note.is_private ? 'Private' : 'Shared'}</span>
-                  </div>
-                  <div dangerouslySetInnerHTML={{ __html: note.body }} />
-                </article>
-              ))}
-            </div>
-          </section>
+          <NotesPanel
+            notes={notes}
+            noteBody={noteBody}
+            privateNote={privateNote}
+            onBodyChange={setNoteBody}
+            onPrivateChange={setPrivateNote}
+            onAdd={onAddNote}
+          />
         </aside>
       </div>
     </div>

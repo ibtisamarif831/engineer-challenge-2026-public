@@ -5,6 +5,8 @@
 Pulse is a small customer-feedback inbox split into two npm workspaces:
 
 - `web/` contains the React + TypeScript single-page app. Start at `src/main.tsx`; UI components are in `src/components/`, and `src/api.ts` is the browser-to-server boundary.
+- Shared React controls live in `web/src/components/ui/` (`Button`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, and `Pagination`). Controls forward native props and refs; `Button` defaults to `type="button"`, so submit buttons must opt in. Use `Field` to label one control and `hideLabel` for visually hidden labels.
+- Screen sections live in `components/inbox/` and `components/detail/`; shared feedback badges live in `components/feedback/`. `Brand` and `AppHeader` own shared application branding. Screen containers (`Inbox`, `ItemDetail`, `Login`, and `App`) retain API calls and state; section components receive values and callbacks. Preserve CSS classes and DOM semantics when extracting components.
 - `server/` contains the Express + TypeScript API. `src/index.ts` defines routes, `src/db.ts` opens SQLite, `src/auth.ts` handles request authentication, `src/llm.ts` generates summaries, and `src/seed.ts` creates and seeds the database.
 - SQLite data is stored in `server/pulse.db` (ignored by Git). There is no dedicated test or assets directory in the current repository.
 
