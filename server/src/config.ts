@@ -10,3 +10,13 @@ function loadJwtSecret(): string {
 }
 
 export const JWT_SECRET = loadJwtSecret()
+
+const defaultOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+export const CORS_ORIGINS = (process.env.CORS_ORIGINS?.trim()
+  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : defaultOrigins)
+
+if (CORS_ORIGINS.some((origin) => origin === '*')) {
+  throw new Error('CORS_ORIGINS must contain explicit frontend origins, not *')
+}
