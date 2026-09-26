@@ -15,11 +15,12 @@ type AssignmentFieldsProps = {
   onPriorityChange: (value: FeedbackPriority) => void
   onDueDateChange: (value: string) => void
   onSave: () => void
+  saving: boolean
   error: string
 }
 
 export default function AssignmentFields({
-  users, assigneeId, priority, dueAt, onAssigneeChange, onPriorityChange, onDueDateChange, onSave, error,
+  users, assigneeId, priority, dueAt, onAssigneeChange, onPriorityChange, onDueDateChange, onSave, error, saving,
 }: AssignmentFieldsProps) {
   return (
     <section className="assignment-section" aria-labelledby="assignment-heading">
@@ -50,7 +51,7 @@ export default function AssignmentFields({
         <Field label="Due date">
           <Input type="date" value={dueAt} onChange={(e) => onDueDateChange(e.target.value)} />
         </Field>
-        <Button onClick={onSave}>Save assignment</Button>
+        <Button disabled={saving} onClick={onSave}>{saving ? 'Saving…' : 'Save assignment'}</Button>
       </div>
       {error && <div className="error" role="alert">{error}</div>}
     </section>

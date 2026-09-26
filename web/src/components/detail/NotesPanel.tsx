@@ -11,10 +11,11 @@ type NotesPanelProps = {
   onBodyChange: (value: string) => void
   onPrivateChange: (value: boolean) => void
   onAdd: () => void
+  saving: boolean
   error: string
 }
 
-export default function NotesPanel({ notes, noteBody, privateNote, onBodyChange, onPrivateChange, onAdd, error }: NotesPanelProps) {
+export default function NotesPanel({ notes, noteBody, privateNote, onBodyChange, onPrivateChange, onAdd, error, saving }: NotesPanelProps) {
   return (
     <section className="mini-panel panel notes-panel">
       <h2>Internal notes</h2>
@@ -30,7 +31,7 @@ export default function NotesPanel({ notes, noteBody, privateNote, onBodyChange,
         checked={privateNote}
         onChange={(e) => onPrivateChange(e.target.checked)}
       />
-      <Button disabled={!noteBody.trim()} onClick={onAdd}>Add note</Button>
+      <Button disabled={saving || !noteBody.trim()} onClick={onAdd}>{saving ? 'Saving…' : 'Add note'}</Button>
       {error && <div className="error" role="alert">{error}</div>}
       <div className="notes-list">
         {notes.map((note) => (

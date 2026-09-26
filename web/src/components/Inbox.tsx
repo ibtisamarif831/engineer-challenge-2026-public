@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { exportFeedback, fetchInbox, toggleResolve } from '../api/feedback'
 import { fetchMetrics } from '../api/metrics'
 import { FeedbackItem, Metrics } from '../types'
@@ -11,16 +11,22 @@ import Pagination from './ui/Pagination'
 import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
 
+import { routeHref, useNavigation } from '../navigation/useNavigation'
+
 const PAGE_SIZE = 10
 
 export default function Inbox({ token }: { token: string }) {
   const [items, setItems] = useState<FeedbackItem[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
+  const { route, navigate } = useNavigation()
+  const { page, filter, search, ticketId: selectedId } = route
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const returnTicket = useRef<number | null>(route.returnTicket || selectedId)
+  const restoreFocus = useRef(false)
+  const previousTicket = useRef(selectedId)
+  const previousInvalid = useRef(route.invalid)
+  const loadPending = useRef(true)
   const [metrics, setMetrics] = useState<Metrics | null>(null)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [exportError, setExportError] = useState('')
   const [isExporting, setIsExporting] = useState(false)
 
@@ -32,29 +38,36 @@ export default function Inbox({ token }: { token: string }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (selectedId !== null || route.invalid) return
     let cancelled = false
-    const load = async () => {
+    let requestId = 0
+    const load = async (foreground = true) => {
+      const currentRequest = ++requestId
       setLoadError('')
-      setLoading(true)
+      loadPending.current = true
+      if (foreground) setLoading(true)
       try {
         const data = await fetchInbox(page, filter, search, token)
-        if (!cancelled) {
+        if (!cancelled && currentRequest === requestId) {
           setItems(data.items)
           setTotal(data.total)
         }
       } catch (error) {
-        if (!cancelled) setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
+        if (!cancelled && currentRequest === requestId) setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && currentRequest === requestId) {
+          loadPending.current = false
+          setLoading(false)
+        }
       }
     }
     void load()
-    const interval = setInterval(load, 45000)
+    const interval = setInterval(() => { void load(false) }, 45000)
     return () => {
       cancelled = true
       clearInterval(interval)
     }
-  }, [page, filter, search, token, reload])
+  }, [page, filter, search, token, reload, selectedId, route.invalid])
 
   useEffect(() => {
     let cancelled = false
@@ -103,15 +116,43 @@ export default function Inbox({ token }: { token: string }) {
     }
   }
 
+  const ticketHref = (id: number) => routeHref({ ...route, ticketId: id, invalid: false })
+  const openTicket = (id: number) => {
+    if (selectedId === null) returnTicket.current = id
+    navigate({ ...route, ticketId: id, invalid: false, returnTicket: selectedId === null ? id : route.returnTicket || selectedId })
+  }
+  const backToInbox = () => navigate({ ...route, ticketId: null, invalid: false })
+
+  useEffect(() => {
+    if ((previousTicket.current !== null || previousInvalid.current) && selectedId === null && !route.invalid) restoreFocus.current = true
+    previousInvalid.current = route.invalid
+    if (route.invalid) headingRef.current?.focus()
+    previousTicket.current = selectedId
+    if (selectedId !== null) returnTicket.current = route.returnTicket || selectedId
+    if (selectedId === null) document.title = route.invalid ? 'Page not found · Pulse' : `Inbox · Page ${page} · Pulse`
+  }, [selectedId, page, route.invalid, route.returnTicket])
+
+  useEffect(() => {
+    if (selectedId !== null || loading || loadPending.current || !restoreFocus.current) return
+    restoreFocus.current = false
+    const target = returnTicket.current === null ? null : document.getElementById(`ticket-link-${returnTicket.current}`)
+    const focusTarget = target || headingRef.current
+    focusTarget?.focus()
+  }, [selectedId, loading, items, loadError])
+
+  if (route.invalid) {
+    return <section className="panel empty-state"><h1 ref={headingRef} tabIndex={-1}>Page not found</h1><p>This ticket URL is invalid.</p><button className="button" onClick={backToInbox}>Return to inbox</button></section>
+  }
+
   if (selectedId !== null) {
     return (
       <ItemDetail
+        key={selectedId}
         id={selectedId}
         token={token}
-        onBack={() => {
-          setSelectedId(null)
-          setReload((value) => value + 1)
-        }}
+        onBack={backToInbox}
+        onOpen={openTicket}
+        ticketHref={ticketHref}
       />
     )
   }
@@ -119,7 +160,7 @@ export default function Inbox({ token }: { token: string }) {
   return (
     <div className="inbox">
       <div className="page-heading">
-        <h1>Inbox</h1>
+        <h1 ref={headingRef} tabIndex={-1}>Inbox</h1>
         <span className="muted">Customer feedback</span>
       </div>
       <ErrorNotice message={metricsError} onRetry={() => setMetricsReload((value) => value + 1)} />
@@ -129,12 +170,10 @@ export default function Inbox({ token }: { token: string }) {
           filter={filter}
           search={search}
           onFilterChange={(value) => {
-            setFilter(value)
-            setPage(1)
+            navigate({ ...route, filter: value, page: 1 })
           }}
           onSearchChange={(value) => {
-            setSearch(value)
-            setPage(1)
+            navigate({ ...route, search: value, page: 1 }, true)
           }}
           onExport={onExport}
           isExporting={isExporting}
@@ -143,9 +182,9 @@ export default function Inbox({ token }: { token: string }) {
         <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
         <ErrorNotice message={actionError} onRetry={() => { setActionError(''); setReload((value) => value + 1) }} />
         {loading && <p role="status">Loading feedback…</p>}
-        {!loading && !loadError && <FeedbackTable items={items} onOpen={setSelectedId} onResolve={onResolve} />}
+        {!loading && !loadError && <FeedbackTable items={items} onOpen={openTicket} ticketHref={ticketHref} onResolve={onResolve} />}
       </section>
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} label="Inbox pagination" />
+      <Pagination page={page} totalPages={totalPages} onPageChange={(value) => navigate({ ...route, page: value })} label="Inbox pagination" />
     </div>
   )
 }

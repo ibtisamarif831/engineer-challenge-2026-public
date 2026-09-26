@@ -783,3 +783,18 @@ h4 {
     --duration-interaction: 0ms;
   }
 }
+
+.draft-notice {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.history-list a {
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.history-list a span {
+  display: block;
+}

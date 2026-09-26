@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   addNote,
   fetchItem,
@@ -14,6 +14,7 @@ import AssignmentFields from './detail/AssignmentFields'
 import CustomerPanel from './detail/CustomerPanel'
 import NotesPanel from './detail/NotesPanel'
 import { ChannelBadge, PriorityBadge, StatusBadge } from './feedback/FeedbackBadges'
+import { draftSession, draftsPersisted, readDraft, useTicketDraft, writeDraft, type TicketDraft } from '../navigation/drafts'
 import Button from './ui/Button'
 import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
@@ -22,21 +23,50 @@ export default function ItemDetail({
   id,
   token,
   onBack,
+  onOpen,
+  ticketHref,
 }: {
   id: number
   token: string
   onBack: () => void
+  onOpen: (id: number) => void
+  ticketHref: (id: number) => string
 }) {
   const [item, setItem] = useState<FeedbackItem | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [customer, setCustomer] = useState<CustomerProfile | null>(null)
   const [notes, setNotes] = useState<InternalNote[]>([])
   const [summary, setSummary] = useState('')
-  const [assigneeId, setAssigneeId] = useState('')
-  const [priority, setPriority] = useState<FeedbackItem['priority']>('normal')
-  const [dueAt, setDueAt] = useState('')
-  const [noteBody, setNoteBody] = useState('')
-  const [privateNote, setPrivateNote] = useState(true)
+  const draft = useTicketDraft(id)
+  const savedAssignment = {
+    assigneeId: item?.assignee_id ? String(item.assignee_id) : '',
+    priority: item?.priority || 'normal',
+    dueAt: item?.due_at?.slice(0, 10) || '',
+  }
+  const assignment = draft.assignment || savedAssignment
+  const { assigneeId, priority, dueAt } = assignment
+  const noteBody = draft.note?.body || ''
+  const privateNote = draft.note?.private ?? true
+  const changeAssignment = (change: Partial<NonNullable<TicketDraft['assignment']>>) => {
+    const next = { ...assignment, ...change }
+    const unchanged = next.assigneeId === savedAssignment.assigneeId && next.priority === savedAssignment.priority && next.dueAt === savedAssignment.dueAt
+    writeDraft(id, { ...readDraft(id), assignment: unchanged ? undefined : next })
+  }
+  const changeNote = (body: string, isPrivate: boolean) => {
+    writeDraft(id, { ...readDraft(id), note: body ? { body, private: isPrivate } : undefined })
+  }
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const focused = useRef(false)
+  const pending = useRef(new Set<string>())
+  const [savingAssignment, setSavingAssignment] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
+  useEffect(() => {
+    document.title = `Ticket #${id}${item ? ` · ${item.customer_name}` : ''} · Pulse`
+    if (!focused.current && (item || loadError)) {
+      headingRef.current?.focus()
+      focused.current = true
+    }
+  })
   const [assignmentError, setAssignmentError] = useState('')
   const [noteError, setNoteError] = useState('')
 
@@ -54,9 +84,6 @@ export default function ItemDetail({
       if (cancelled) return
 
       setItem(data)
-      setAssigneeId(data.assignee_id ? String(data.assignee_id) : '')
-      setPriority(data.priority)
-      setDueAt(data.due_at ? data.due_at.slice(0, 10) : '')
 
     }
 
@@ -67,6 +94,16 @@ export default function ItemDetail({
 
     return () => { cancelled = true }
   }, [id, token, reload])
+
+  useEffect(() => {
+    const onSaved = (event: Event) => {
+      if ((event as CustomEvent<number>).detail !== id) return
+      setReload((value) => value + 1)
+      setRelatedReload((value) => value + 1)
+    }
+    window.addEventListener('pulse:ticket-saved', onSaved)
+    return () => window.removeEventListener('pulse:ticket-saved', onSaved)
+  }, [id])
 
   const customerId = item?.customer_id
   useEffect(() => {
@@ -108,7 +145,11 @@ export default function ItemDetail({
   }
 
   const onSaveAssignment = async () => {
-    if (!item) return
+    if (!item || pending.current.has('assignment')) return
+    pending.current.add('assignment')
+    setSavingAssignment(true)
+    const session = draftSession()
+    const submitted = readDraft(id).assignment
     setAssignmentError('')
     try {
       const updated = await updateAssignment(
@@ -121,20 +162,37 @@ export default function ItemDetail({
         token
       )
       setItem(updated)
+      if (session === draftSession() && readDraft(id).assignment === submitted) {
+        writeDraft(id, { ...readDraft(id), assignment: undefined })
+      }
+      if (session === draftSession()) window.dispatchEvent(new CustomEvent('pulse:ticket-saved', { detail: id }))
     } catch (error) {
       setAssignmentError(requestErrorMessage(error, 'Unable to save assignment. Your changes are kept; please try again.'))
+    } finally {
+      pending.current.delete('assignment')
+      setSavingAssignment(false)
     }
   }
 
   const onAddNote = async () => {
-    if (!noteBody.trim()) return
+    if (!noteBody.trim() || pending.current.has('note')) return
+    pending.current.add('note')
+    setSavingNote(true)
+    const session = draftSession()
+    const submitted = readDraft(id).note
     setNoteError('')
     try {
       const note = await addNote(id, { body: noteBody, is_private: privateNote }, token)
       setNotes((current) => [note, ...current])
-      setNoteBody('')
+      if (session === draftSession() && readDraft(id).note === submitted) {
+        writeDraft(id, { ...readDraft(id), note: undefined })
+      }
+      if (session === draftSession()) window.dispatchEvent(new CustomEvent('pulse:ticket-saved', { detail: id }))
     } catch (error) {
       setNoteError(requestErrorMessage(error, 'Unable to add note. Your draft is kept; please try again.'))
+    } finally {
+      pending.current.delete('note')
+      setSavingNote(false)
     }
   }
 
@@ -144,6 +202,7 @@ export default function ItemDetail({
         <Button variant="quiet" className="back-button" onClick={onBack}>
           ← Back to inbox
         </Button>
+        <h1 ref={headingRef} tabIndex={-1}>Ticket #{id}</h1>
         <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
         {!loadError && <p role="status">Loading ticket…</p>}
       </div>
@@ -155,12 +214,16 @@ export default function ItemDetail({
       <Button variant="quiet" className="back-button" onClick={onBack}>
         ← Back to inbox
       </Button>
+      {(draft.assignment || draft.note?.body) && <div className="panel draft-notice" role="status">
+        <p>{draftsPersisted() ? 'Unsaved draft. Kept in this tab when you navigate or refresh; discarded on confirmed sign-out.' : 'Unsaved draft. Browser storage is unavailable. Keep this tab open or copy your changes before refreshing.'}</p>
+        <Button onClick={() => { if (window.confirm('Discard unsaved changes for this ticket?')) writeDraft(id, {}) }}>Discard draft</Button>
+      </div>}
       <ErrorNotice message={relatedError} onRetry={() => setRelatedReload((value) => value + 1)} />
       <div className="detail-grid">
         <div className="detail-card panel">
           <div className="detail-head">
             <div>
-              <h1>{item.customer_name}</h1>
+              <h1 ref={headingRef} tabIndex={-1}>{item.customer_name} · #{id}</h1>
               <div className="muted">{item.customer_email}</div>
             </div>
             <StatusBadge status={item.status} />
@@ -176,11 +239,12 @@ export default function ItemDetail({
             assigneeId={assigneeId}
             priority={priority}
             dueAt={dueAt}
-            onAssigneeChange={setAssigneeId}
-            onPriorityChange={setPriority}
-            onDueDateChange={setDueAt}
+            onAssigneeChange={(value) => changeAssignment({ assigneeId: value })}
+            onPriorityChange={(value) => changeAssignment({ priority: value })}
+            onDueDateChange={(value) => changeAssignment({ dueAt: value })}
             onSave={onSaveAssignment}
             error={assignmentError}
+            saving={savingAssignment}
           />
           <div className="detail-actions">
             <Button variant="primary" onClick={onResolve}>
@@ -200,16 +264,17 @@ export default function ItemDetail({
         </div>
 
         <aside className="side-panels">
-          {customer && <CustomerPanel customer={customer} />}
+          {customer && <CustomerPanel customer={customer} onOpen={onOpen} ticketHref={ticketHref} />}
 
           <NotesPanel
             notes={notes}
             noteBody={noteBody}
             privateNote={privateNote}
-            onBodyChange={setNoteBody}
-            onPrivateChange={setPrivateNote}
+            onBodyChange={(value) => changeNote(value, privateNote)}
+            onPrivateChange={(value) => changeNote(noteBody, value)}
             onAdd={onAddNote}
             error={noteError}
+            saving={savingNote}
           />
         </aside>
       </div>

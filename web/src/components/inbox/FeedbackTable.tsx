@@ -1,14 +1,16 @@
+import { isPlainClick } from '../../navigation/useNavigation'
 import type { FeedbackItem } from '../../types'
 import Button from '../ui/Button'
 import { ChannelBadge, PriorityBadge, StatusBadge } from '../feedback/FeedbackBadges'
 
 type FeedbackTableProps = {
+  ticketHref: (id: number) => string
   items: FeedbackItem[]
   onOpen: (id: number) => void
   onResolve: (item: FeedbackItem) => void
 }
 
-export default function FeedbackTable({ items, onOpen, onResolve }: FeedbackTableProps) {
+export default function FeedbackTable({ items, onOpen, onResolve, ticketHref }: FeedbackTableProps) {
   return (
     <>
       <div className="table-scroll" role="region" aria-label="Feedback tickets, scroll horizontally for all columns" tabIndex={0}>
@@ -30,17 +32,21 @@ export default function FeedbackTable({ items, onOpen, onResolve }: FeedbackTabl
             {items.map((item) => (
               <tr key={item.id} className="row" onClick={() => onOpen(item.id)}>
                 <td>
-                  <Button
-                    variant="plain"
+                  <a
+                    id={`ticket-link-${item.id}`}
+                    href={ticketHref(item.id)}
                     className="ticket-button"
                     aria-label={`Open ticket ${item.id} from ${item.customer_name}`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      onOpen(item.id)
+                      if (isPlainClick(e)) {
+                        e.preventDefault()
+                        onOpen(item.id)
+                      }
                     }}
                   >
                     {item.customer_name}
-                  </Button>
+                  </a>
                 </td>
                 <td>
                   <ChannelBadge channel={item.channel} />
