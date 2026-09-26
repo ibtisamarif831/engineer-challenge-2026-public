@@ -23,6 +23,19 @@ No test runner or test script is configured. When adding tests, document the cho
 
 Follow the existing TypeScript style: two-space indentation, single quotes, no semicolons, and trailing commas where useful. Use PascalCase for React components and filenames (for example, `ItemDetail.tsx`); use camelCase for functions and variables. Keep shared API data shapes in `web/src/types.ts` and API calls in `web/src/api.ts`. No formatter or linter is currently configured.
 
+## Design System
+
+- `web/src/styles.css` is the source of truth for the light corporate theme. Define palette primitives (`--palette-*`) and semantic colors (`--color-*`) in `:root`; component rules consume semantic tokens rather than raw colors.
+- Reuse the `--space-*`, `--font-*`, `--radius-*`, sizing, border, focus, and motion tokens. Media query breakpoints remain literal because CSS variables do not work in media queries.
+- Use shared `.button` variants, `.input`, `.field`, `.panel`, and status/priority badges. Layout selectors control placement rather than overriding component colors. Keep visible text alongside status colors.
+- Preserve visible keyboard focus and reduced-motion behavior. Below 960px ticket details stack; below 640px controls wrap and metrics use two columns. The ticket table scrolls within its labeled region.
+- Validate visual changes at desktop, tablet, and mobile widths, plus keyboard navigation and existing workflows. Browser screenshots may be stored under `output/playwright/`; no automated test runner is configured.
+
+## Existing Workflow Findings
+
+- Inbox pagination currently skips the first ten records (`offset = page * PAGE_SIZE` in the API) and returns an unfiltered total. Treat inaccurate page counts as an API issue, not a table styling issue.
+- The inbox polling effect captures the initial filter/search/page values. Its 45-second refresh can replace filtered results with the initial query. This is separate from visual state styling.
+
 ## Security & Configuration
 
 Copy `server/.env.example` and `web/.env.example` to local `.env` files; never commit secrets. Treat the seeded credentials and current auth setup as development-only. Use parameterized SQL for new queries, especially when incorporating request data.

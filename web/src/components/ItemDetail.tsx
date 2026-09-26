@@ -98,7 +98,7 @@ export default function ItemDetail({
   if (!item) {
     return (
       <div className="detail">
-        <button className="link-button" onClick={onBack}>
+        <button className="button button-quiet back-button" onClick={onBack}>
           ← Back to inbox
         </button>
       </div>
@@ -107,14 +107,14 @@ export default function ItemDetail({
 
   return (
     <div className="detail">
-      <button className="link-button" onClick={onBack}>
+      <button className="button button-quiet back-button" onClick={onBack}>
         ← Back to inbox
       </button>
       <div className="detail-grid">
-        <div className="detail-card">
+        <div className="detail-card panel">
           <div className="detail-head">
             <div>
-              <h2>{item.customer_name}</h2>
+              <h1>{item.customer_name}</h1>
               <div className="muted">{item.customer_email}</div>
             </div>
             <span className={'badge ' + item.status}>{item.status}</span>
@@ -122,48 +122,51 @@ export default function ItemDetail({
           <div className="detail-meta">
             <span className="channel">{item.channel}</span>
             <span className={'priority ' + item.priority}>{item.priority}</span>
-            <span className="muted">{new Date(item.created_at).toLocaleString()}</span>
+            <time className="muted" dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
           </div>
           <div className="message" dangerouslySetInnerHTML={{ __html: item.message }} />
-          <div className="assignment-panel">
-            <label>
-              Owner
-              <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                <option value="">Nobody</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.role})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Priority
-              <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-                {['low', 'normal', 'high', 'urgent'].map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Due
-              <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-            </label>
-            <button onClick={onSaveAssignment}>Save routing</button>
-          </div>
+          <section className="assignment-section" aria-labelledby="assignment-heading">
+            <h2 id="assignment-heading">Assignment</h2>
+            <div className="assignment-panel">
+              <label className="field">
+                Owner
+                <select className="input" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                  <option value="">Unassigned</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Priority
+                <select className="input" value={priority} onChange={(e) => setPriority(e.target.value)}>
+                  {['low', 'normal', 'high', 'urgent'].map((p) => (
+                    <option key={p} value={p}>
+                      {p[0].toUpperCase() + p.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Due date
+                <input className="input" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+              </label>
+              <button className="button" onClick={onSaveAssignment}>Save assignment</button>
+            </div>
+          </section>
           <div className="detail-actions">
-            <button onClick={onResolve}>
+            <button className="button button-primary" onClick={onResolve}>
               {item.status === 'open' ? 'Mark resolved' : 'Reopen'}
             </button>
-            <button className="secondary" onClick={onSummarize}>
+            <button className="button" onClick={onSummarize}>
               Summarize
             </button>
           </div>
           {summary && (
             <div className="summary">
-              <h3>Summary</h3>
+              <h2>Summary</h2>
               <div dangerouslySetInnerHTML={{ __html: summary }} />
             </div>
           )}
@@ -171,8 +174,8 @@ export default function ItemDetail({
 
         <aside className="side-panels">
           {customer && (
-            <section className="mini-panel customer-panel">
-              <h3>Customer Profile</h3>
+            <section className="mini-panel panel customer-panel">
+              <h2>Customer profile</h2>
               <div className="profile-row">
                 <span>Plan</span>
                 <strong>{customer.plan}</strong>
@@ -181,7 +184,7 @@ export default function ItemDetail({
                 <span>Health</span>
                 <strong>{customer.health_score}</strong>
               </div>
-              <h4>Recent history</h4>
+              <h3>Recent history</h3>
               <ul className="history-list">
                 {customer.history.map((historyItem) => (
                   <li key={historyItem.id}>
@@ -193,12 +196,15 @@ export default function ItemDetail({
             </section>
           )}
 
-          <section className="mini-panel notes-panel">
-            <h3>Internal Notes</h3>
+          <section className="mini-panel panel notes-panel">
+            <h2>Internal notes</h2>
+            <label className="sr-only" htmlFor="note-body">Note</label>
             <textarea
+              id="note-body"
+              className="input"
               value={noteBody}
               onChange={(e) => setNoteBody(e.target.value)}
-              placeholder="Paste context, snippets, reminders..."
+              placeholder="Add context for your team…"
             />
             <label className="checkbox-row">
               <input
@@ -208,7 +214,7 @@ export default function ItemDetail({
               />
               Private note
             </label>
-            <button onClick={onAddNote}>Add note</button>
+            <button className="button" disabled={!noteBody.trim()} onClick={onAddNote}>Add note</button>
             <div className="notes-list">
               {notes.map((note) => (
                 <article key={note.id} className="note">

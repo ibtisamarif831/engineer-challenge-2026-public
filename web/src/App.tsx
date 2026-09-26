@@ -30,22 +30,27 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="marquee">
-        <span className="marquee-text">
-          🚀🔥 WELCOME 2 PULSE™ — THE #1 FEEDBACK INBOX ON THE INFORMATION SUPERHIGHWAY!!! 🔥🚀 ⭐
-          best viewed in Netscape Navigator @ 800×600 ⭐ don't forget to sign our guestbook!!! 👽💾📠✨
-        </span>
-      </div>
       <header className="topbar">
-        <h1>💖 Pulse 💖</h1>
-        <div className="topbar-right">
-          <span className="topbar-user">{user.name}</span>
-          <button className="link-button" onClick={onLogout}>
-            Sign out
-          </button>
+        <div className="topbar-inner">
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M3 12h4l3-6 4 12 3-6h4" />
+              </svg>
+            </span>
+            Pulse
+          </div>
+          <div className="topbar-right">
+            <span className="topbar-user">{user.name}</span>
+            <button className="button button-inverse" onClick={onLogout}>
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
-      <Inbox token={token} />
+      <main className="workspace">
+        <Inbox token={token} />
+      </main>
     </div>
   )
 }
