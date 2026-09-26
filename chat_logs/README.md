@@ -1,0 +1,28 @@
+# Project chat logs
+
+Readable exports of local Codex chats whose recorded working directory matches this project.
+
+Exported at (UTC): 2026-09-26T18:29:27.023030+00:00
+
+These are snapshots, including the export conversation up to the time of export. Resumed log segments are kept as separate files and can repeat earlier context. User messages and visible assistant replies are included. System/developer instructions, injected repository/skill context, internal reasoning, tool calls/results, and automated approval sessions are omitted. Images are represented by placeholders. These Markdown files are readable transcripts, not a native Codex restore format.
+
+| Started (UTC) | Transcript | Messages | First user message |
+| --- | --- | ---: | --- |
+| 2026-09-25T22:55:07.679Z | [2026-09-26T00-55-07-01a0dac7-938e-73e2-9c69-016dd7bc5b24.md](2026-09-26T00-55-07-01a0dac7-938e-73e2-9c69-016dd7bc5b24.md) | 1 | You will help me understanding this unfamiliar codebase. What are the pieces in the app, how do they work together so i  |
+| 2026-09-26T12:09:43.874Z | [2026-09-26T14-09-43-01a0dac7-938e-73e2-9c69-016dd7bc5b24_01a0dd9f-0ec2-7c33-8933-b104717f5e46.md](2026-09-26T14-09-43-01a0dac7-938e-73e2-9c69-016dd7bc5b24_01a0dd9f-0ec2-7c33-8933-b104717f5e46.md) | 5 | You will help me understanding this unfamiliar codebase. What are the pieces in the app, how do they work together so i  |
+| 2026-09-26T12:13:46.897Z | [2026-09-26T14-13-46-01a0dac7-938e-73e2-9c69-016dd7bc5b24_01a0dda2-c411-7ba3-a26b-c5970a5898e4.md](2026-09-26T14-13-46-01a0dac7-938e-73e2-9c69-016dd7bc5b24_01a0dda2-c411-7ba3-a26b-c5970a5898e4.md) | 10 | Generate a file named AGENTS.md that serves as a contributor guide for this repository. Your goal is to produce a clear, |
+| 2026-09-26T12:16:19.349Z | [2026-09-26T14-16-19-01a0dda5-1782-74b1-a03c-53a2f5ed909a.md](2026-09-26T14-16-19-01a0dda5-1782-74b1-a03c-53a2f5ed909a.md) | 18 | The web app has a very nonsense theme and we need to have a proper design system with proper design tokens in the css wi |
+| 2026-09-26T12:43:20.851Z | [2026-09-26T14-43-20-01a0dda5-1782-74b1-a03c-53a2f5ed909a_01a0ddbd-d593-7831-bfca-f7762351c61c.md](2026-09-26T14-43-20-01a0dda5-1782-74b1-a03c-53a2f5ed909a_01a0ddbd-d593-7831-bfca-f7762351c61c.md) | 6 | <in-app-browser-context source="ambient-ui-state"> This block is automatically supplied ambient UI state, not part of th |
+| 2026-09-26T12:52:57.665Z | [2026-09-26T14-52-57-01a0ddc6-a2ad-7132-aaef-d3d322efd262.md](2026-09-26T14-52-57-01a0ddc6-a2ad-7132-aaef-d3d322efd262.md) | 26 | I want you to do a whole app audit for finding the issues around the following areas. \- security. use $security-best-p |
+| 2026-09-26T14:07:02.985Z | [2026-09-26T16-07-02-01a0de0a-7738-7800-aa1f-afb836239a77.md](2026-09-26T16-07-02-01a0de0a-7738-7800-aa1f-afb836239a77.md) | 16 | the server repo folder structure is in a bad shape. Everything is in a same file. We need proper structure with services |
+| 2026-09-26T14:24:56.521Z | [2026-09-26T16-24-56-01a0de1a-d8b8-7e82-bbe2-e2ee1d94d9bd.md](2026-09-26T16-24-56-01a0de1a-d8b8-7e82-bbe2-e2ee1d94d9bd.md) | 44 | We will start with security fixes in batches. Make plan for batch 1. Remember not to over engineer things. |
+| 2026-09-26T15:13:25.247Z | [2026-09-26T17-13-25-01a0de47-3aef-7fb0-9e27-12c36b1f31f9.md](2026-09-26T17-13-25-01a0de47-3aef-7fb0-9e27-12c36b1f31f9.md) | 21 | We need to make sure we have api service in frontend organizad according to feature. Create a fetch client that does tok |
+| 2026-09-26T15:29:01.103Z | [2026-09-26T17-29-01-01a0de55-8299-7233-b39c-5d5c89f1ae92.md](2026-09-26T17-29-01-01a0de55-8299-7233-b39c-5d5c89f1ae92.md) | 15 | Do we have server side validation and client side validation for post requests? |
+| 2026-09-26T15:36:01.115Z | [2026-09-26T17-36-01-01a0de5b-eb45-7d93-9c3d-404c96365375.md](2026-09-26T17-36-01-01a0de5b-eb45-7d93-9c3d-404c96365375.md) | 12 | Let us start implementing batch 07 |
+| 2026-09-26T15:46:02.124Z | [2026-09-26T17-46-02-01a0de65-16f9-7a83-a8a6-4bc09d5edb7b.md](2026-09-26T17-46-02-01a0de65-16f9-7a83-a8a6-4bc09d5edb7b.md) | 12 | We have to implement A026 To keep the loader states consistent and truthful also we have to make sure that the loader st |
+| 2026-09-26T15:57:13.711Z | [2026-09-26T17-57-13-01a0de6f-565f-7d60-832a-3fe56fa17ddc.md](2026-09-26T17-57-13-01a0de6f-565f-7d60-832a-3fe56fa17ddc.md) | 29 | We will be adding new features. .For the table we need sortable table with the arrows on the header that fetches the sor |
+| 2026-09-26T16:12:22.125Z | [2026-09-26T18-12-22-01a0de7d-32dc-7130-84c2-85b949b63ec2.md](2026-09-26T18-12-22-01a0de7d-32dc-7130-84c2-85b949b63ec2.md) | 17 | We need spam labeling in the messages. If support ticket message has some URL, we add a warning there for the user. star |
+| 2026-09-26T18:10:23.092Z | [2026-09-26T20-10-23-01a0de6f-565f-7d60-832a-3fe56fa17ddc_01a0dee9-3ef4-7c71-8597-5c19f6dd8c28.md](2026-09-26T20-10-23-01a0de6f-565f-7d60-832a-3fe56fa17ddc_01a0dee9-3ef4-7c71-8597-5c19f6dd8c28.md) | 3 | push the changes |
+| 2026-09-26T18:10:58.143Z | [2026-09-26T20-10-58-01a0dee9-c7d0-7390-b451-5aff26549a92.md](2026-09-26T20-10-58-01a0dee9-c7d0-7390-b451-5aff26549a92.md) | 5 | remove batches and push tickets and audit reports. |
+| 2026-09-26T18:16:48.319Z | [2026-09-26T20-16-48-01a0deef-1faa-7633-8926-c4579384404d.md](2026-09-26T20-16-48-01a0deef-1faa-7633-8926-c4579384404d.md) | 9 | resolving a ticket leaves it visible in the Open filter, and the dashboard counts stay stale. Fix this and also update t |
+| 2026-09-26T18:27:20.214Z | [2026-09-26T20-27-20-01a0def8-c405-7b91-9267-fc0d5851b00e.md](2026-09-26T20-27-20-01a0def8-c405-7b91-9267-fc0d5851b00e.md) | 8 | How do i import the chat session logs for this project? |
