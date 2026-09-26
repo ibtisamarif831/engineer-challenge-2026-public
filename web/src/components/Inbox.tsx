@@ -12,6 +12,7 @@ import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
 
 import { routeHref, useNavigation } from '../navigation/useNavigation'
+import Loader from './ui/Loader'
 
 const PAGE_SIZE = 10
 
@@ -36,6 +37,8 @@ export default function Inbox({ token }: { token: string }) {
   const [reload, setReload] = useState(0)
   const [metricsReload, setMetricsReload] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [resolvingId, setResolvingId] = useState<number | null>(null)
 
   useEffect(() => {
     if (selectedId !== null || route.invalid) return
@@ -51,6 +54,7 @@ export default function Inbox({ token }: { token: string }) {
         if (!cancelled && currentRequest === requestId) {
           setItems(data.items)
           setTotal(data.total)
+          setHasLoaded(true)
         }
       } catch (error) {
         if (!cancelled && currentRequest === requestId) setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
@@ -81,12 +85,16 @@ export default function Inbox({ token }: { token: string }) {
   }, [token, metricsReload])
 
   const onResolve = async (item: FeedbackItem) => {
+    if (resolvingId !== null) return
     setActionError('')
+    setResolvingId(item.id)
     try {
       const updated = await toggleResolve(item.id, token)
       setItems((current) => current.map((it) => it.id === item.id ? updated : it))
     } catch (error) {
       setActionError(requestErrorMessage(error, 'Unable to update ticket status. Refresh to check its current status before trying again.'))
+    } finally {
+      setResolvingId(null)
     }
   }
 
@@ -181,8 +189,8 @@ export default function Inbox({ token }: { token: string }) {
         {exportError && <div className="error" role="alert">{exportError}</div>}
         <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
         <ErrorNotice message={actionError} onRetry={() => { setActionError(''); setReload((value) => value + 1) }} />
-        {loading && <p role="status">Loading feedback…</p>}
-        {!loading && !loadError && <FeedbackTable items={items} onOpen={openTicket} ticketHref={ticketHref} onResolve={onResolve} />}
+        {loading && <Loader label={hasLoaded ? 'Refreshing feedback…' : 'Loading feedback…'} />}
+        {!loading && !loadError && <FeedbackTable items={items} onOpen={openTicket} ticketHref={ticketHref} onResolve={onResolve} resolvingId={resolvingId} />}
       </section>
       <Pagination page={page} totalPages={totalPages} onPageChange={(value) => navigate({ ...route, page: value })} label="Inbox pagination" />
     </div>

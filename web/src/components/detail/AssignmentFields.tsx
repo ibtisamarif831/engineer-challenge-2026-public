@@ -51,7 +51,7 @@ export default function AssignmentFields({
         <Field label="Due date">
           <Input type="date" value={dueAt} onChange={(e) => onDueDateChange(e.target.value)} />
         </Field>
-        <Button disabled={saving} onClick={onSave}>{saving ? 'Saving…' : 'Save assignment'}</Button>
+        <Button disabled={saving} onClick={onSave}>{saving ? 'Saving assignment…' : 'Save assignment'}</Button>
       </div>
       {error && <div className="error" role="alert">{error}</div>}
     </section>

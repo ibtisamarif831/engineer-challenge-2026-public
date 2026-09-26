@@ -18,6 +18,7 @@ import { draftSession, draftsPersisted, readDraft, useTicketDraft, writeDraft, t
 import Button from './ui/Button'
 import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
+import Loader from './ui/Loader'
 
 export default function ItemDetail({
   id,
@@ -60,6 +61,10 @@ export default function ItemDetail({
   const pending = useRef(new Set<string>())
   const [savingAssignment, setSavingAssignment] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [isResolving, setIsResolving] = useState(false)
+  const [isSummarizing, setIsSummarizing] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [relatedLoading, setRelatedLoading] = useState(false)
   useEffect(() => {
     document.title = `Ticket #${id}${item ? ` · ${item.customer_name}` : ''} · Pulse`
     if (!focused.current && (item || loadError)) {
@@ -110,6 +115,7 @@ export default function ItemDetail({
     if (customerId === undefined) return
     let cancelled = false
     setRelatedError('')
+    setRelatedLoading(true)
     Promise.all([
       fetchUsers(token), fetchCustomer(customerId, token), fetchNotes(id, token),
     ]).then(([userData, profile, noteData]) => {
@@ -119,28 +125,37 @@ export default function ItemDetail({
       setNotes(noteData.notes)
     }).catch((error: unknown) => {
       if (!cancelled) setRelatedError(requestErrorMessage(error, 'Unable to load assignment options, customer details or notes. Please try again.'))
+    }).finally(() => {
+      if (!cancelled) setRelatedLoading(false)
     })
     return () => { cancelled = true }
   }, [id, token, customerId, relatedReload])
 
   const onResolve = async () => {
-    if (!item) return
+    if (!item || isResolving) return
     setActionError('')
+    setIsResolving(true)
     try {
       const updated = await toggleResolve(item.id, token)
       setItem((current) => current ? { ...current, status: updated.status } : current)
     } catch (error) {
       setActionError(requestErrorMessage(error, 'Unable to update status. Check the ticket status before trying again.'))
+    } finally {
+      setIsResolving(false)
     }
   }
 
   const onSummarize = async () => {
+    if (isSummarizing) return
     setActionError('')
+    setIsSummarizing(true)
     try {
       const data = await summarize(id, token)
       setSummary(data.summary)
     } catch (error) {
       setActionError(requestErrorMessage(error, 'Unable to create a summary. Please try again.'))
+    } finally {
+      setIsSummarizing(false)
     }
   }
 
@@ -162,6 +177,7 @@ export default function ItemDetail({
         token
       )
       setItem(updated)
+      setSaveMessage('Assignment saved.')
       if (session === draftSession() && readDraft(id).assignment === submitted) {
         writeDraft(id, { ...readDraft(id), assignment: undefined })
       }
@@ -184,6 +200,7 @@ export default function ItemDetail({
     try {
       const note = await addNote(id, { body: noteBody, is_private: privateNote }, token)
       setNotes((current) => [note, ...current])
+      setSaveMessage('Note saved.')
       if (session === draftSession() && readDraft(id).note === submitted) {
         writeDraft(id, { ...readDraft(id), note: undefined })
       }
@@ -204,7 +221,7 @@ export default function ItemDetail({
         </Button>
         <h1 ref={headingRef} tabIndex={-1}>Ticket #{id}</h1>
         <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
-        {!loadError && <p role="status">Loading ticket…</p>}
+        {!loadError && <Loader label="Loading ticket…" />}
       </div>
     )
   }
@@ -219,6 +236,8 @@ export default function ItemDetail({
         <Button onClick={() => { if (window.confirm('Discard unsaved changes for this ticket?')) writeDraft(id, {}) }}>Discard draft</Button>
       </div>}
       <ErrorNotice message={relatedError} onRetry={() => setRelatedReload((value) => value + 1)} />
+      {relatedLoading && <Loader label="Loading ticket details…" size="small" />}
+      {saveMessage && <p className="success-message" role="status">{saveMessage}</p>}
       <div className="detail-grid">
         <div className="detail-card panel">
           <div className="detail-head">
@@ -247,11 +266,11 @@ export default function ItemDetail({
             saving={savingAssignment}
           />
           <div className="detail-actions">
-            <Button variant="primary" onClick={onResolve}>
-              {item.status === 'open' ? 'Mark resolved' : 'Reopen'}
+            <Button variant="primary" disabled={isResolving} onClick={onResolve}>
+              {isResolving ? 'Updating…' : item.status === 'open' ? 'Mark resolved' : 'Reopen'}
             </Button>
-            <Button onClick={onSummarize}>
-              Summarize
+            <Button disabled={isSummarizing} onClick={onSummarize}>
+              {isSummarizing ? 'Summarizing…' : 'Summarize'}
             </Button>
           </div>
           <ErrorNotice message={actionError} />

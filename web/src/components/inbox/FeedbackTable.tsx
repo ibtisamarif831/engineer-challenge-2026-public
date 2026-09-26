@@ -8,9 +8,10 @@ type FeedbackTableProps = {
   items: FeedbackItem[]
   onOpen: (id: number) => void
   onResolve: (item: FeedbackItem) => void
+  resolvingId: number | null
 }
 
-export default function FeedbackTable({ items, onOpen, onResolve, ticketHref }: FeedbackTableProps) {
+export default function FeedbackTable({ items, onOpen, onResolve, ticketHref, resolvingId }: FeedbackTableProps) {
   return (
     <>
       <div className="table-scroll" role="region" aria-label="Feedback tickets, scroll horizontally for all columns" tabIndex={0}>
@@ -65,6 +66,7 @@ export default function FeedbackTable({ items, onOpen, onResolve, ticketHref }: 
                 <td className="due">{item.due_at ? item.due_at.slice(0, 10) : 'No due date'}</td>
                 <td>
                   <Button
+                    disabled={resolvingId === item.id}
                     variant="quiet"
                     className="row-action"
                     onClick={(e) => {
@@ -72,7 +74,7 @@ export default function FeedbackTable({ items, onOpen, onResolve, ticketHref }: 
                       onResolve(item)
                     }}
                   >
-                    {item.status === 'open' ? 'Resolve' : 'Reopen'}
+                    {resolvingId === item.id ? 'Updating…' : item.status === 'open' ? 'Resolve' : 'Reopen'}
                   </Button>
                 </td>
               </tr>
