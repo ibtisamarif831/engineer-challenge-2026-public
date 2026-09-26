@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { exportFeedbackUrl, fetchInbox, fetchMetrics, toggleResolve } from '../api'
+import { exportFeedback, fetchInbox, fetchMetrics, toggleResolve } from '../api'
 import { FeedbackItem, Metrics } from '../types'
 import ItemDetail from './ItemDetail'
 import FeedbackTable from './inbox/FeedbackTable'
@@ -17,6 +17,8 @@ export default function Inbox({ token }: { token: string }) {
   const [search, setSearch] = useState('')
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [exportError, setExportError] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
 
   const load = async () => {
     const data = await fetchInbox(page, filter, search, token)
@@ -52,6 +54,30 @@ export default function Inbox({ token }: { token: string }) {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const onExport = async () => {
+    setExportError('')
+    setIsExporting(true)
+    try {
+      const blob = await exportFeedback(filter, search, token)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      try {
+        link.href = url
+        link.download = 'pulse-feedback-export.csv'
+        document.body.appendChild(link)
+        link.click()
+      } finally {
+        link.remove()
+        // Allow the browser to start the download before releasing its Blob URL.
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+    } catch {
+      setExportError('Unable to export feedback. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   if (selectedId !== null) {
     return (
       <ItemDetail
@@ -84,10 +110,10 @@ export default function Inbox({ token }: { token: string }) {
             setSearch(value)
             setPage(1)
           }}
-          onExport={() => {
-            window.location.href = exportFeedbackUrl(filter, search, token)
-          }}
+          onExport={onExport}
+          isExporting={isExporting}
         />
+        {exportError && <div className="error" role="alert">{exportError}</div>}
         <FeedbackTable items={items} onOpen={setSelectedId} onResolve={onResolve} />
       </section>
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} label="Inbox pagination" />

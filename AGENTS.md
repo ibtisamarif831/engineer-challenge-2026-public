@@ -66,7 +66,7 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 
 Copy `server/.env.example` and `web/.env.example` to local `.env` files; never commit secrets. Treat the seeded credentials and current auth setup as development-only. Use parameterized SQL for new queries, especially when incorporating request data.
 
-`server/src/config.ts` loads and validates `JWT_SECRET` once at startup. Generate a local key with `openssl rand -hex 32`; missing, placeholder or shorter-than-32-byte secrets prevent API startup in every environment. Signing and verification use HS256, and authentication resolves the current public user from the database. Key changes require a restart and fresh login. CSV export still accepts a verified query token until batch 4.
+`server/src/config.ts` loads and validates `JWT_SECRET` once at startup. Generate a local key with `openssl rand -hex 32`; missing, placeholder or shorter-than-32-byte secrets prevent API startup in every environment. Signing and verification use HS256, and authentication resolves the current public user from the database. Key changes require a restart and fresh login. CSV export uses the same header authentication as other routes; query tokens are no longer accepted. Inbox/export queries use URLSearchParams. Exported formula-like text and leading control characters are apostrophe-prefixed; stored values are unchanged. Spreadsheet-application testing is excluded at the user's request, so A007's import criterion remains unverified.
 
 ## Commits, Pull Requests & Guide Maintenance
 

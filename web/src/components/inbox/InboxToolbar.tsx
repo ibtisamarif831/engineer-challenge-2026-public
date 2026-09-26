@@ -8,9 +8,10 @@ type InboxToolbarProps = {
   onFilterChange: (filter: string) => void
   onSearchChange: (search: string) => void
   onExport: () => void
+  isExporting: boolean
 }
 
-export default function InboxToolbar({ filter, search, onFilterChange, onSearchChange, onExport }: InboxToolbarProps) {
+export default function InboxToolbar({ filter, search, onFilterChange, onSearchChange, onExport, isExporting }: InboxToolbarProps) {
   return (
     <div className="toolbar">
       <div className="filters" role="group" aria-label="Filter by status">
@@ -33,7 +34,9 @@ export default function InboxToolbar({ filter, search, onFilterChange, onSearchC
           placeholder="Search feedback…"
         />
       </Field>
-      <Button className="export-button" onClick={onExport}>Export CSV</Button>
+      <Button className="export-button" disabled={isExporting} onClick={onExport}>
+        {isExporting ? 'Exporting…' : 'Export CSV'}
+      </Button>
     </div>
   )
 }

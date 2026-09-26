@@ -80,3 +80,14 @@ API without a provider key. With `FAKE_LLM=true`, summaries need no provider key
 
 Feedback, internal notes and summaries display as plain text with line breaks preserved.
 Stored HTML, including the sample `<strong>` and `<em>` tags, is shown literally.
+
+## CSV exports
+
+Export CSV downloads the current status/search selection using an authenticated request.
+Bearer tokens are sent in the Authorization header; query-string tokens are not accepted.
+
+Formula-like text (including whitespace-prefixed formulas) and text starting with control
+characters receive a leading apostrophe before normal CSV quote escaping. Ordinary text,
+quotes and line breaks are preserved, and stored data is unchanged. Import CSV fields as
+text and retain the protective prefix. Spreadsheet-application import behavior remains
+unverified; see [CSV injection guidance](https://community.owasp.org/attacks/CSV_Injection).

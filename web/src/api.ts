@@ -25,7 +25,8 @@ export async function fetchInbox(
   search: string,
   token: string
 ): Promise<InboxResponse> {
-  const res = await fetch(`${API_URL}/feedback?page=${page}&status=${status}&q=${search}`, {
+  const query = new URLSearchParams({ page: String(page), status, q: search })
+  const res = await fetch(`${API_URL}/feedback?${query}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   return res.json()
@@ -60,8 +61,13 @@ export async function fetchMetrics(token: string): Promise<Metrics> {
   return res.json()
 }
 
-export function exportFeedbackUrl(status: string, search: string, token: string) {
-  return `${API_URL}/export.csv?status=${status}&q=${search}&token=${token}`
+export async function exportFeedback(status: string, search: string, token: string): Promise<Blob> {
+  const query = new URLSearchParams({ status, q: search })
+  const res = await fetch(`${API_URL}/export.csv?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Unable to export feedback')
+  return res.blob()
 }
 
 export async function fetchCustomer(id: number, token: string): Promise<CustomerProfile> {

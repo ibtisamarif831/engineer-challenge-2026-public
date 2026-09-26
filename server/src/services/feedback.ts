@@ -109,7 +109,11 @@ export async function summarizeFeedback(db: DatabaseConnection, id: number, summ
 }
 
 function csvCell(value: unknown): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`
+  const text = String(value ?? '')
+  // Keep untrusted spreadsheet text inert, including whitespace/control-prefixed formulas.
+  const unsafePrefix = /^(?:[\s\u0000-\u001f\u007f-\u009f]*[=+\-@＝＋－＠]|[\u0000-\u001f\u007f-\u009f])/
+  const safeText = unsafePrefix.test(text) ? `'${text}` : text
+  return `"${safeText.replace(/"/g, '""')}"`
 }
 
 export function exportFeedback(db: DatabaseConnection, filter: FeedbackFilter): string {

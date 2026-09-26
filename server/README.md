@@ -35,7 +35,9 @@ records return 404; malformed inputs return 400. Dates retain their existing sto
 format and time-zone semantics. Invalid pre-existing records are not rewritten.
 
 All existing URLs remain available. Read, assignment and resolve return the same
-`FeedbackItem` contract. CSV still uses the existing transport and note inclusion policy.
+`FeedbackItem` contract. CSV uses shared header authentication, with no query-token fallback.
+Formula-like cells and leading control characters are apostrophe-prefixed before CSV quoting;
+the note inclusion policy is unchanged. Spreadsheet import behavior remains unverified.
 Synchronous Express errors and asynchronous summary errors reach the final JSON middleware;
 parser failures retain 400/413/415 statuses. Unexpected errors use a generic response and
 log no request body, token, SQL or provider error details.
@@ -61,5 +63,5 @@ configured signing key, then resolves the current user from the database. The ro
 documents key setup, restart and fresh login. Real-account work has been removed from
 the test-data-only backlog at the user's request. Schema constraints/migrations,
 broader browser error recovery, pagination/count corrections, metric date
-scope alignment, token-free CSV transport/formula protection, and summary deadlines remain
+scope alignment, spreadsheet-import verification, and summary deadlines remain
 separate tickets. This refactor does not establish production readiness.
