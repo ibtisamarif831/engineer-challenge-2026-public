@@ -1,6 +1,7 @@
 import { isPlainClick } from '../../navigation/useNavigation'
 import type { CustomerProfile } from '../../types'
 import { StatusBadge } from '../feedback/FeedbackBadges'
+import MessageWithWarning, { containsUrl } from '../feedback/MessageWithWarning'
 
 export default function CustomerPanel({ customer, onOpen, ticketHref }: { customer: CustomerProfile; onOpen: (id: number) => void; ticketHref: (id: number) => string }) {
   return (
@@ -24,7 +25,11 @@ export default function CustomerPanel({ customer, onOpen, ticketHref }: { custom
               if (isPlainClick(event)) { event.preventDefault(); onOpen(historyItem.id) }
             }}>
               <span>Ticket #{historyItem.id} · <time dateTime={historyItem.created_at}>{new Date(historyItem.created_at).toLocaleDateString()}</time></span>
-              <span className="feedback-text">{historyPreview(historyItem.message)}</span>
+              <MessageWithWarning
+                message={historyPreview(historyItem.message)}
+                className="feedback-text"
+                warnIfUrl={containsUrl(historyItem.message)}
+              />
             </a>
           </li>
         ))}

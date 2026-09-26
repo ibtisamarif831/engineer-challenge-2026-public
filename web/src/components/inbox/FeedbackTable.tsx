@@ -1,6 +1,7 @@
 import { isPlainClick } from '../../navigation/useNavigation'
 import type { FeedbackItem } from '../../types'
 import Button from '../ui/Button'
+import MessageWithWarning, { containsUrl } from '../feedback/MessageWithWarning'
 import { ChannelBadge, PriorityBadge, StatusBadge } from '../feedback/FeedbackBadges'
 
 type FeedbackTableProps = {
@@ -56,8 +57,11 @@ export default function FeedbackTable({ items, onOpen, onResolve, ticketHref, re
                   <PriorityBadge priority={item.priority} />
                 </td>
                 <td className="preview">
-                  {item.message.slice(0, 70)}
-                  {item.message.length > 70 ? '…' : ''}
+                  <MessageWithWarning
+                    message={item.message.length > 70 ? `${item.message.slice(0, 70)}…` : item.message}
+                    className="feedback-text"
+                    warnIfUrl={containsUrl(item.message)}
+                  />
                 </td>
                 <td>{item.assignee_name || 'Unassigned'}</td>
                 <td>

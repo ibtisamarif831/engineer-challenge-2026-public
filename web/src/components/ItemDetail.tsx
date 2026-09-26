@@ -19,6 +19,7 @@ import Button from './ui/Button'
 import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
 import Loader from './ui/Loader'
+import MessageWithWarning from './feedback/MessageWithWarning'
 
 export default function ItemDetail({
   id,
@@ -252,7 +253,7 @@ export default function ItemDetail({
             <PriorityBadge priority={item.priority} />
             <time className="muted" dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
           </div>
-          <div className="message feedback-text">{item.message}</div>
+          <div className="message feedback-text"><MessageWithWarning message={item.message} /></div>
           <AssignmentFields
             users={users}
             assigneeId={assigneeId}
