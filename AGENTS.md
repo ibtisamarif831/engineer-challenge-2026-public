@@ -4,7 +4,7 @@
 
 Pulse is a small customer-feedback inbox split into two npm workspaces:
 
-- `web/` contains the React + TypeScript single-page app. Start at `src/main.tsx`; UI components are in `src/components/`, and `src/api.ts` is the browser-to-server boundary.
+- `web/` contains the React + TypeScript single-page app. Start at `src/main.tsx`; UI components are in `src/components/`, and `src/api/` is the browser-to-server boundary, organized by feature (`auth`, `feedback`, `customers`, `users`, and `metrics`). The shared `client.ts` appends bearer tokens, serializes JSON bodies, checks HTTP errors, and decodes JSON or Blob responses. Tokens are passed from React state; feature modules own endpoint paths and API contracts.
 - Shared React controls live in `web/src/components/ui/` (`Button`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, and `Pagination`). Controls forward native props and refs; `Button` defaults to `type="button"`, so submit buttons must opt in. Use `Field` to label one control and `hideLabel` for visually hidden labels.
 - Screen sections live in `components/inbox/` and `components/detail/`; shared feedback badges live in `components/feedback/`. `Brand` and `AppHeader` own shared application branding. Screen containers (`Inbox`, `ItemDetail`, `Login`, and `App`) retain API calls and state; section components receive values and callbacks. Preserve CSS classes and DOM semantics when extracting components.
 - `server/` contains the Express + TypeScript API. `src/index.ts` starts the listener; `src/app.ts` composes the app. `src/routes/` maps URLs, `src/controllers/` validates HTTP inputs and sends typed responses, `src/services/` owns business logic and parameterized SQL, and `src/middleware/` handles authentication and JSON errors. `src/validation/` contains small runtime input parsers, `src/types/` contains database/HTTP types, and `src/integrations/llm.ts` calls the summary provider. `src/db.ts` and `src/seed.ts` retain database opening and seeding.
@@ -24,7 +24,7 @@ No test runner or test script is configured. Automated test additions are deferr
 
 ## Coding Style & Naming
 
-Follow the existing TypeScript style: two-space indentation, single quotes, no semicolons, and trailing commas where useful. Use PascalCase for React components and filenames (for example, `ItemDetail.tsx`); use camelCase for functions and variables. Keep shared API data shapes in `shared/types.ts` and API calls in `web/src/api.ts`. No formatter or linter is currently configured.
+Follow the existing TypeScript style: two-space indentation, single quotes, no semicolons, and trailing commas where useful. Use PascalCase for React components and filenames (for example, `ItemDetail.tsx`); use camelCase for functions and variables. Keep shared API data shapes in `shared/types.ts` and API calls in `web/src/api/`. No formatter or linter is currently configured.
 
 ### Keep Solutions Simple
 
@@ -55,9 +55,9 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 ## Existing Workflow Findings
 
 - Inbox pagination currently skips the first ten records (`offset = page * PAGE_SIZE` in the API) and returns an unfiltered total. Treat inaccurate page counts as an API issue, not a table styling issue.
-- Assignment and note saves now catch API failures, show local inline alerts and retain entered values on failure; broader error recovery remains in A015/B06.
+- UI API failures use scoped alerts and read retries; assignment/note drafts survive request failures and status changes apply after success. Root/workspace React error boundaries provide render-crash fallbacks. Session expiry prompts manual sign-out/sign-in; complete response-shape validation and the full failure matrix remain in A015/B06.
 - Feedback, notes and summaries render as React text using `.feedback-text` for preserved whitespace and wrapping. Stored HTML is displayed literally; retain seed content. Provider keys belong only in server configuration, never browser variables or request headers.
-- The inbox polling effect captures the initial filter/search/page values. Its 45-second refresh can replace filtered results with the initial query. This is separate from visual state styling.
+- Inbox polling shares the guarded load/error path and follows the current filter/search/page; previous-query responses are ignored. Complete polling/mutation synchronization and metrics refresh requirements remain tracked in A016/A017/A020.
 - The 2026-09-26 audit is indexed in `app_audit_report.md`, with separate security, functional, UX, and design/accessibility reports. Findings are a snapshot of revision `12566cc`; verify whether each issue still exists before acting on it.
 - Audit evidence and screenshots are local, ignored files under `output/playwright/`. Security and state-changing reproductions used a disposable seeded copy; do not run those probes or reseed a database that must be retained. No permanent test runner was added.
 - Audit remediation tasks live in `tickets/`, grouped into `security/`, `functionality/`, `usability-ux/`, and `design-accessibility/`. Start with `tickets/README.md`; preserve finding IDs A001–A033 and update ticket/index statuses together as work is verified.

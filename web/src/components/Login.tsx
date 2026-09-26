@@ -1,5 +1,7 @@
 import { useState, FormEvent } from 'react'
-import { login } from '../api'
+import { ApiRequestError } from '../api/client'
+import { requestErrorMessage } from '../api/errors'
+import { login } from '../api/auth'
 import { User } from '../types'
 import Brand from './Brand'
 import Button from './ui/Button'
@@ -17,8 +19,10 @@ export default function Login({ onLogin }: { onLogin: (token: string, user: User
     try {
       const { token, user } = await login(email, password)
       onLogin(token, user)
-    } catch {
-      setError('Invalid email or password')
+    } catch (error) {
+      setError(error instanceof ApiRequestError && error.status === 401
+        ? 'Invalid email or password'
+        : requestErrorMessage(error, 'Unable to sign in. Please try again.'))
     }
   }
 

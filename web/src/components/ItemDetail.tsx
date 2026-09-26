@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react'
 import {
   addNote,
-  fetchCustomer,
   fetchItem,
   fetchNotes,
-  fetchUsers,
   summarize,
   toggleResolve,
   updateAssignment,
-} from '../api'
+} from '../api/feedback'
+import { fetchCustomer } from '../api/customers'
+import { fetchUsers } from '../api/users'
 import { CustomerProfile, FeedbackItem, InternalNote, User } from '../types'
 import AssignmentFields from './detail/AssignmentFields'
 import CustomerPanel from './detail/CustomerPanel'
 import NotesPanel from './detail/NotesPanel'
 import { ChannelBadge, PriorityBadge, StatusBadge } from './feedback/FeedbackBadges'
 import Button from './ui/Button'
+import ErrorNotice from './ui/ErrorNotice'
+import { requestErrorMessage } from '../api/errors'
 
 export default function ItemDetail({
   id,
@@ -38,6 +40,12 @@ export default function ItemDetail({
   const [assignmentError, setAssignmentError] = useState('')
   const [noteError, setNoteError] = useState('')
 
+  const [loadError, setLoadError] = useState('')
+  const [relatedError, setRelatedError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [reload, setReload] = useState(0)
+  const [relatedReload, setRelatedReload] = useState(0)
+
   useEffect(() => {
     let cancelled = false
 
@@ -50,35 +58,53 @@ export default function ItemDetail({
       setPriority(data.priority)
       setDueAt(data.due_at ? data.due_at.slice(0, 10) : '')
 
-      fetchUsers(token).then((userData) => {
-        if (!cancelled) setUsers(userData.users)
-      })
-      fetchCustomer(data.customer_id, token).then((profile) => {
-        if (!cancelled) setCustomer(profile)
-      })
-      fetchNotes(id, token).then((noteData) => {
-        if (!cancelled) setNotes(noteData.notes)
-      })
     }
 
-    load()
+    setLoadError('')
+    load().catch((error: unknown) => {
+      if (!cancelled) setLoadError(requestErrorMessage(error, 'Unable to load this ticket. Please try again.'))
+    })
 
-    return () => {
-      cancelled = true
-    }
-  }, [id, token])
+    return () => { cancelled = true }
+  }, [id, token, reload])
+
+  const customerId = item?.customer_id
+  useEffect(() => {
+    if (customerId === undefined) return
+    let cancelled = false
+    setRelatedError('')
+    Promise.all([
+      fetchUsers(token), fetchCustomer(customerId, token), fetchNotes(id, token),
+    ]).then(([userData, profile, noteData]) => {
+      if (cancelled) return
+      setUsers(userData.users)
+      setCustomer(profile)
+      setNotes(noteData.notes)
+    }).catch((error: unknown) => {
+      if (!cancelled) setRelatedError(requestErrorMessage(error, 'Unable to load assignment options, customer details or notes. Please try again.'))
+    })
+    return () => { cancelled = true }
+  }, [id, token, customerId, relatedReload])
 
   const onResolve = async () => {
     if (!item) return
-    const updated = await toggleResolve(item.id, token)
-    setItem({ ...item, status: updated.status })
+    setActionError('')
+    try {
+      const updated = await toggleResolve(item.id, token)
+      setItem((current) => current ? { ...current, status: updated.status } : current)
+    } catch (error) {
+      setActionError(requestErrorMessage(error, 'Unable to update status. Check the ticket status before trying again.'))
+    }
   }
 
   const onSummarize = async () => {
+    setActionError('')
     try {
       const data = await summarize(id, token)
       setSummary(data.summary)
-    } catch (e) {}
+    } catch (error) {
+      setActionError(requestErrorMessage(error, 'Unable to create a summary. Please try again.'))
+    }
   }
 
   const onSaveAssignment = async () => {
@@ -95,8 +121,8 @@ export default function ItemDetail({
         token
       )
       setItem(updated)
-    } catch {
-      setAssignmentError('Unable to save assignment. Please try again.')
+    } catch (error) {
+      setAssignmentError(requestErrorMessage(error, 'Unable to save assignment. Your changes are kept; please try again.'))
     }
   }
 
@@ -105,10 +131,10 @@ export default function ItemDetail({
     setNoteError('')
     try {
       const note = await addNote(id, { body: noteBody, is_private: privateNote }, token)
-      setNotes([note, ...notes])
+      setNotes((current) => [note, ...current])
       setNoteBody('')
-    } catch {
-      setNoteError('Unable to add note. Your draft is kept; please try again.')
+    } catch (error) {
+      setNoteError(requestErrorMessage(error, 'Unable to add note. Your draft is kept; please try again.'))
     }
   }
 
@@ -118,6 +144,8 @@ export default function ItemDetail({
         <Button variant="quiet" className="back-button" onClick={onBack}>
           ← Back to inbox
         </Button>
+        <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
+        {!loadError && <p role="status">Loading ticket…</p>}
       </div>
     )
   }
@@ -127,6 +155,7 @@ export default function ItemDetail({
       <Button variant="quiet" className="back-button" onClick={onBack}>
         ← Back to inbox
       </Button>
+      <ErrorNotice message={relatedError} onRetry={() => setRelatedReload((value) => value + 1)} />
       <div className="detail-grid">
         <div className="detail-card panel">
           <div className="detail-head">
@@ -161,6 +190,7 @@ export default function ItemDetail({
               Summarize
             </Button>
           </div>
+          <ErrorNotice message={actionError} />
           {summary && (
             <div className="summary">
               <h2>Summary</h2>

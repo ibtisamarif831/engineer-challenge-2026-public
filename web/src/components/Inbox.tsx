@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
-import { exportFeedback, fetchInbox, fetchMetrics, toggleResolve } from '../api'
+import { exportFeedback, fetchInbox, toggleResolve } from '../api/feedback'
+import { fetchMetrics } from '../api/metrics'
 import { FeedbackItem, Metrics } from '../types'
 import ItemDetail from './ItemDetail'
 import FeedbackTable from './inbox/FeedbackTable'
 import InboxToolbar from './inbox/InboxToolbar'
 import MetricsStrip from './inbox/MetricsStrip'
 import Pagination from './ui/Pagination'
+
+import ErrorNotice from './ui/ErrorNotice'
+import { requestErrorMessage } from '../api/errors'
 
 const PAGE_SIZE = 10
 
@@ -20,36 +24,57 @@ export default function Inbox({ token }: { token: string }) {
   const [exportError, setExportError] = useState('')
   const [isExporting, setIsExporting] = useState(false)
 
-  const load = async () => {
-    const data = await fetchInbox(page, filter, search, token)
-    setItems(data.items)
-    setTotal(data.total)
-  }
+  const [loadError, setLoadError] = useState('')
+  const [metricsError, setMetricsError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [reload, setReload] = useState(0)
+  const [metricsReload, setMetricsReload] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    load()
-  }, [page, filter, search])
+    let cancelled = false
+    const load = async () => {
+      setLoadError('')
+      setLoading(true)
+      try {
+        const data = await fetchInbox(page, filter, search, token)
+        if (!cancelled) {
+          setItems(data.items)
+          setTotal(data.total)
+        }
+      } catch (error) {
+        if (!cancelled) setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void load()
+    const interval = setInterval(load, 45000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [page, filter, search, token, reload])
 
   useEffect(() => {
-    fetchMetrics(token).then(setMetrics)
-  }, [token])
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const data = await fetchInbox(page, filter, search, token)
-      const merged = data.items.map((incoming) => {
-        const local = items.find((it) => it.id === incoming.id)
-        return local ? { ...incoming, status: local.status } : incoming
-      })
-      setItems(merged)
-    }, 45000)
-    return () => clearInterval(interval)
-  }, [])
+    let cancelled = false
+    setMetricsError('')
+    fetchMetrics(token).then((data) => {
+      if (!cancelled) setMetrics(data)
+    }).catch((error: unknown) => {
+      if (!cancelled) setMetricsError(requestErrorMessage(error, 'Unable to refresh metrics. Displayed counts may be out of date.'))
+    })
+    return () => { cancelled = true }
+  }, [token, metricsReload])
 
   const onResolve = async (item: FeedbackItem) => {
-    const nextStatus = item.status === 'open' ? 'resolved' : 'open'
-    setItems(items.map((it) => (it.id === item.id ? { ...it, status: nextStatus } : it)))
-    await toggleResolve(item.id, token)
+    setActionError('')
+    try {
+      const updated = await toggleResolve(item.id, token)
+      setItems((current) => current.map((it) => it.id === item.id ? updated : it))
+    } catch (error) {
+      setActionError(requestErrorMessage(error, 'Unable to update ticket status. Refresh to check its current status before trying again.'))
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -71,8 +96,8 @@ export default function Inbox({ token }: { token: string }) {
         // Allow the browser to start the download before releasing its Blob URL.
         setTimeout(() => URL.revokeObjectURL(url), 1000)
       }
-    } catch {
-      setExportError('Unable to export feedback. Please try again.')
+    } catch (error) {
+      setExportError(requestErrorMessage(error, 'Unable to export feedback. Please try again.'))
     } finally {
       setIsExporting(false)
     }
@@ -85,7 +110,7 @@ export default function Inbox({ token }: { token: string }) {
         token={token}
         onBack={() => {
           setSelectedId(null)
-          load()
+          setReload((value) => value + 1)
         }}
       />
     )
@@ -97,6 +122,7 @@ export default function Inbox({ token }: { token: string }) {
         <h1>Inbox</h1>
         <span className="muted">Customer feedback</span>
       </div>
+      <ErrorNotice message={metricsError} onRetry={() => setMetricsReload((value) => value + 1)} />
       {metrics && <MetricsStrip metrics={metrics} />}
       <section className="panel" aria-label="Feedback inbox">
         <InboxToolbar
@@ -114,7 +140,10 @@ export default function Inbox({ token }: { token: string }) {
           isExporting={isExporting}
         />
         {exportError && <div className="error" role="alert">{exportError}</div>}
-        <FeedbackTable items={items} onOpen={setSelectedId} onResolve={onResolve} />
+        <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
+        <ErrorNotice message={actionError} onRetry={() => { setActionError(''); setReload((value) => value + 1) }} />
+        {loading && <p role="status">Loading feedback…</p>}
+        {!loading && !loadError && <FeedbackTable items={items} onOpen={setSelectedId} onResolve={onResolve} />}
       </section>
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} label="Inbox pagination" />
     </div>

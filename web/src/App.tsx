@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Login from './components/Login'
 import Inbox from './components/Inbox'
+import ErrorBoundary from './components/ErrorBoundary'
 import AppHeader from './components/AppHeader'
 import { User } from './types'
 
@@ -33,7 +34,7 @@ export default function App() {
     <div className="app">
       <AppHeader userName={user.name} onLogout={onLogout} />
       <main className="workspace">
-        <Inbox token={token} />
+        <ErrorBoundary key={token}><Inbox token={token} /></ErrorBoundary>
       </main>
     </div>
   )
