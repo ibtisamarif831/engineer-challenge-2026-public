@@ -45,7 +45,7 @@ Work from individual tickets and their related findings. Preserve explicitly def
 | [A017 — Prevent stale responses from replacing current results](functionality/A017-prevent-stale-responses-from-replacing-current-results.md) | Medium | Open | Current defect |
 | [A018 — Encode inbox and export query parameters](functionality/A018-encode-inbox-and-export-query-parameters.md) | Medium | Done | Current defect |
 | [A019 — Make repeated note and status actions safe](functionality/A019-make-repeated-note-and-status-actions-safe.md) | Medium | Open | Current defect |
-| [A020 — Refresh dependent views after ticket mutations](functionality/A020-refresh-dependent-views-after-ticket-mutations.md) | Medium | Open | Current defect |
+| [A020 — Refresh dependent views after ticket mutations](functionality/A020-refresh-dependent-views-after-ticket-mutations.md) | Medium | Done | Current defect |
 | [A021 — Standardize due-date storage display and overdue rules](functionality/A021-standardize-due-date-storage-display-and-overdue-rules.md) | Medium | Done (migration deferred) | Current defect |
 | [A022 — Apply consistent date scopes to metrics](functionality/A022-apply-consistent-date-scopes-to-metrics.md) | Medium | Done | Current defect |
 | [A023 — Recover from malformed stored sessions](functionality/A023-recover-from-malformed-stored-sessions.md) | Medium | Open | Current defect |
@@ -138,3 +138,7 @@ Web TypeScript/Vite build and `git diff --check` passed. Browser used isolated l
 ### Remaining gates
 
 Actual screen-reader announcement testing is unverified (A032). Storage-denial/unload prompts and reordered in-flight mutation/navigation responses need broader integration checks. Mutation idempotency, full polling reconciliation and metrics checks remain tracked in A016/A017/A019/A020. At the time of these checks, API pagination/count defects remained tracked in A014. Static-host SPA fallback must be configured when deployment is selected.
+
+## Mutation refresh follow-up (2026-09-26)
+
+A020 is complete: successful saves invalidate older reads and refresh the active inbox query, filtered totals, dashboard metrics and customer history. Last-page correction and selection reconciliation are verified with mocked browser data, alongside inbox resolve and detail resolve/reopen/priority/due-date updates. Both workspace builds pass. See A020 for evidence and limitations; A015/A016/A017 retain broader failure and polling/race verification. The existing database and original audit reports were preserved.

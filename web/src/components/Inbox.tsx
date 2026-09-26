@@ -15,6 +15,7 @@ import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
 import { routeHref, useNavigation, type Route } from '../navigation/useNavigation'
 import Loader from './ui/Loader'
+import { draftSession } from '../navigation/drafts'
 
 const PAGE_SIZE = 10
 
@@ -53,6 +54,7 @@ export default function Inbox({ token }: { token: string }) {
   const previousInvalid = useRef(route.invalid)
   const loadPending = useRef(true)
   const requestVersion = useRef(0)
+  const metricsVersion = useRef(0)
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [exportError, setExportError] = useState('')
   const [isExporting, setIsExporting] = useState(false)
@@ -66,6 +68,18 @@ export default function Inbox({ token }: { token: string }) {
   const [loading, setLoading] = useState(true)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [resolvingId, setResolvingId] = useState<number | null>(null)
+
+  useEffect(() => {
+    const onSaved = () => {
+      // Invalidate reads immediately, before the refresh effects run.
+      requestVersion.current += 1
+      metricsVersion.current += 1
+      setReload((value) => value + 1)
+      setMetricsReload((value) => value + 1)
+    }
+    window.addEventListener('pulse:ticket-saved', onSaved)
+    return () => window.removeEventListener('pulse:ticket-saved', onSaved)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -92,6 +106,11 @@ export default function Inbox({ token }: { token: string }) {
       try {
         const data = await fetchInbox(query, token)
         if (!cancelled && currentRequest === requestVersion.current) {
+          const lastPage = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
+          if (page > lastPage) {
+            navigate({ ...route, page: lastPage }, true)
+            return
+          }
           setItems(data.items)
           setTotal(data.total)
           setSelectedIds((current) => {
@@ -122,11 +141,12 @@ export default function Inbox({ token }: { token: string }) {
 
   useEffect(() => {
     let cancelled = false
+    const currentRequest = ++metricsVersion.current
     setMetricsError('')
     fetchMetrics(token).then((data) => {
-      if (!cancelled) setMetrics(data)
+      if (!cancelled && currentRequest === metricsVersion.current) setMetrics(data)
     }).catch((error: unknown) => {
-      if (!cancelled) setMetricsError(requestErrorMessage(error, 'Unable to refresh metrics. Displayed counts may be out of date.'))
+      if (!cancelled && currentRequest === metricsVersion.current) setMetricsError(requestErrorMessage(error, 'Unable to refresh metrics. Displayed counts may be out of date.'))
     })
     return () => { cancelled = true }
   }, [token, metricsReload])
@@ -144,9 +164,10 @@ export default function Inbox({ token }: { token: string }) {
     if (resolvingId !== null) return
     setActionError('')
     setResolvingId(item.id)
+    const session = draftSession()
     try {
-      const updated = await toggleResolve(item.id, token)
-      setItems((current) => current.map((it) => it.id === item.id ? updated : it))
+      await toggleResolve(item.id, token)
+      if (session === draftSession()) window.dispatchEvent(new CustomEvent('pulse:ticket-saved', { detail: item.id }))
     } catch (error) {
       setActionError(requestErrorMessage(error, 'Unable to update ticket status. Refresh to check its current status before trying again.'))
     } finally {

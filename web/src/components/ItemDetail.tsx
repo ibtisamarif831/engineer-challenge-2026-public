@@ -60,6 +60,8 @@ export default function ItemDetail({
   const headingRef = useRef<HTMLHeadingElement>(null)
   const focused = useRef(false)
   const pending = useRef(new Set<string>())
+  const itemVersion = useRef(0)
+  const relatedVersion = useRef(0)
   const [savingAssignment, setSavingAssignment] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [isResolving, setIsResolving] = useState(false)
@@ -84,10 +86,11 @@ export default function ItemDetail({
 
   useEffect(() => {
     let cancelled = false
+    const currentRequest = ++itemVersion.current
 
     async function load() {
       const data = await fetchItem(id, token)
-      if (cancelled) return
+      if (cancelled || currentRequest !== itemVersion.current) return
 
       setItem(data)
 
@@ -95,7 +98,7 @@ export default function ItemDetail({
 
     setLoadError('')
     load().catch((error: unknown) => {
-      if (!cancelled) setLoadError(requestErrorMessage(error, 'Unable to load this ticket. Please try again.'))
+      if (!cancelled && currentRequest === itemVersion.current) setLoadError(requestErrorMessage(error, 'Unable to load this ticket. Please try again.'))
     })
 
     return () => { cancelled = true }
@@ -103,8 +106,12 @@ export default function ItemDetail({
 
   useEffect(() => {
     const onSaved = (event: Event) => {
-      if ((event as CustomEvent<number>).detail !== id) return
-      setReload((value) => value + 1)
+      if ((event as CustomEvent<number>).detail === id) {
+        itemVersion.current += 1
+        setReload((value) => value + 1)
+      }
+      // Another ticket may belong to this same customer's history.
+      relatedVersion.current += 1
       setRelatedReload((value) => value + 1)
     }
     window.addEventListener('pulse:ticket-saved', onSaved)
@@ -115,19 +122,20 @@ export default function ItemDetail({
   useEffect(() => {
     if (customerId === undefined) return
     let cancelled = false
+    const currentRequest = ++relatedVersion.current
     setRelatedError('')
     setRelatedLoading(true)
     Promise.all([
       fetchUsers(token), fetchCustomer(customerId, token), fetchNotes(id, token),
     ]).then(([userData, profile, noteData]) => {
-      if (cancelled) return
+      if (cancelled || currentRequest !== relatedVersion.current) return
       setUsers(userData.users)
       setCustomer(profile)
       setNotes(noteData.notes)
     }).catch((error: unknown) => {
-      if (!cancelled) setRelatedError(requestErrorMessage(error, 'Unable to load assignment options, customer details or notes. Please try again.'))
+      if (!cancelled && currentRequest === relatedVersion.current) setRelatedError(requestErrorMessage(error, 'Unable to load assignment options, customer details or notes. Please try again.'))
     }).finally(() => {
-      if (!cancelled) setRelatedLoading(false)
+      if (!cancelled && currentRequest === relatedVersion.current) setRelatedLoading(false)
     })
     return () => { cancelled = true }
   }, [id, token, customerId, relatedReload])
@@ -136,9 +144,11 @@ export default function ItemDetail({
     if (!item || isResolving) return
     setActionError('')
     setIsResolving(true)
+    const session = draftSession()
     try {
       const updated = await toggleResolve(item.id, token)
       setItem((current) => current ? { ...current, status: updated.status } : current)
+      if (session === draftSession()) window.dispatchEvent(new CustomEvent('pulse:ticket-saved', { detail: id }))
     } catch (error) {
       setActionError(requestErrorMessage(error, 'Unable to update status. Check the ticket status before trying again.'))
     } finally {
