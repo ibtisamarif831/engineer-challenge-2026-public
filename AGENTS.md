@@ -7,10 +7,11 @@ Pulse is a small customer-feedback inbox split into two npm workspaces:
 - `web/` contains the React + TypeScript single-page app. Start at `src/main.tsx`; UI components are in `src/components/`, and `src/api.ts` is the browser-to-server boundary.
 - Shared React controls live in `web/src/components/ui/` (`Button`, `Field`, `Input`, `Select`, `Textarea`, `Checkbox`, and `Pagination`). Controls forward native props and refs; `Button` defaults to `type="button"`, so submit buttons must opt in. Use `Field` to label one control and `hideLabel` for visually hidden labels.
 - Screen sections live in `components/inbox/` and `components/detail/`; shared feedback badges live in `components/feedback/`. `Brand` and `AppHeader` own shared application branding. Screen containers (`Inbox`, `ItemDetail`, `Login`, and `App`) retain API calls and state; section components receive values and callbacks. Preserve CSS classes and DOM semantics when extracting components.
-- `server/` contains the Express + TypeScript API. `src/index.ts` defines routes, `src/db.ts` opens SQLite, `src/auth.ts` handles request authentication, `src/llm.ts` generates summaries, and `src/seed.ts` creates and seeds the database.
+- `server/` contains the Express + TypeScript API. `src/index.ts` starts the listener; `src/app.ts` composes the app. `src/routes/` maps URLs, `src/controllers/` validates HTTP inputs and sends typed responses, `src/services/` owns business logic and parameterized SQL, and `src/middleware/` handles authentication and JSON errors. `src/validation/` contains small runtime input parsers, `src/types/` contains database/HTTP types, and `src/integrations/llm.ts` calls the summary provider. `src/db.ts` and `src/seed.ts` retain database opening and seeding.
+- `shared/types.ts` owns API contracts used by both workspaces; `web/src/types.ts` re-exports them. Keep database-only fields in server row types. Request bodies and external JSON start as `unknown` and must be narrowed before use. Services do not depend on Express.
 - SQLite data is stored in `server/pulse.db` (ignored by Git). There is no dedicated test or assets directory in the current repository.
 
-The browser calls the API with JSON and a bearer token; the API reads or updates SQLite and returns JSON. Keep request/response shapes aligned with `web/src/types.ts`.
+The browser calls the API with JSON and a bearer token; the API reads or updates SQLite and returns JSON. Keep request/response shapes aligned with `shared/types.ts`.
 
 ## Build, Test & Development Commands
 
@@ -19,11 +20,28 @@ The browser calls the API with JSON and a bearer token; the API reads or updates
 - `npm run seed` recreates the SQLite tables and sample data; it deletes existing seeded database contents.
 - `npm run build` type-checks and builds the web app. `npm run build --workspace server` type-checks the API.
 
-No test runner or test script is configured. When adding tests, document the chosen runner and command here.
+No test runner or test script is configured. Automated test additions are deferred at the user's request; use the workspace builds for current verification.
 
 ## Coding Style & Naming
 
-Follow the existing TypeScript style: two-space indentation, single quotes, no semicolons, and trailing commas where useful. Use PascalCase for React components and filenames (for example, `ItemDetail.tsx`); use camelCase for functions and variables. Keep shared API data shapes in `web/src/types.ts` and API calls in `web/src/api.ts`. No formatter or linter is currently configured.
+Follow the existing TypeScript style: two-space indentation, single quotes, no semicolons, and trailing commas where useful. Use PascalCase for React components and filenames (for example, `ItemDetail.tsx`); use camelCase for functions and variables. Keep shared API data shapes in `shared/types.ts` and API calls in `web/src/api.ts`. No formatter or linter is currently configured.
+
+### Keep Solutions Simple
+
+- Prefer the smallest robust solution that fixes the current problem.
+- Reuse existing patterns. Add abstractions, dependencies, infrastructure, or broad refactors only when clearly necessary.
+- Keep plans and implementations focused on the current ticket or batch. Avoid speculative requirements and production features beyond the agreed scope.
+- Verify the changed behavior with proportionate checks; introduce test infrastructure only when its benefit justifies the complexity.
+- Simplicity must still preserve essential security, correctness, and existing data.
+
+### Coding Challenge Remediation Scope
+
+- Implement one agreed batch at a time. The security batch plan is in `tickets/security-batches.md`; related tickets may share a fix, but nearby findings do not automatically expand the batch.
+- Preserve `server/src/seed.ts`, sample credentials, seeded content, and the existing database. Do not reseed the working database or introduce data cleanup/schema migrations for these batches. Use disposable databases for mutation checks.
+- Keep the existing demo login and bearer-token architecture. Fix token verification, signing-key configuration, and credential disclosure without adding password hashing (including Argon2/bcrypt), registration, password reset, refresh tokens, a session service, or new role/privacy policies unless separately requested.
+- Enforce request types and referenced-record existence in the API using small helpers and parameterized SQL. Do not introduce an ORM, generic validation framework, or database-constraint migration for this scope.
+- Separate current defects from deployment preparation. Do not add hosting infrastructure, distributed rate limiting, or production-only policies without an agreed need.
+- When only part of a ticket is in scope (especially A004 and A010), record completed checks and explicitly deferred requirements. Keep the ticket/index status aligned and do not mark the original ticket fully Done while its requirements remain deferred. Preserve the original audit reports.
 
 ## Design System
 
@@ -31,12 +49,15 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 - Reuse the `--space-*`, `--font-*`, `--radius-*`, sizing, border, focus, and motion tokens. Media query breakpoints remain literal because CSS variables do not work in media queries.
 - Use shared `.button` variants, `.input`, `.field`, `.panel`, and status/priority badges. Layout selectors control placement rather than overriding component colors. Keep visible text alongside status colors.
 - Preserve visible keyboard focus and reduced-motion behavior. Below 960px ticket details stack; below 640px controls wrap and metrics use two columns. The ticket table scrolls within its labeled region.
-- Validate visual changes at desktop, tablet, and mobile widths, plus keyboard navigation and existing workflows. Browser screenshots may be stored under `output/playwright/`; no automated test runner is configured.
+- Validate visual changes at desktop, tablet, and mobile widths, plus keyboard navigation and existing workflows. Browser screenshots may be stored under `output/playwright/`; no browser test runner is configured.
 
 ## Existing Workflow Findings
 
 - Inbox pagination currently skips the first ten records (`offset = page * PAGE_SIZE` in the API) and returns an unfiltered total. Treat inaccurate page counts as an API issue, not a table styling issue.
 - The inbox polling effect captures the initial filter/search/page values. Its 45-second refresh can replace filtered results with the initial query. This is separate from visual state styling.
+- The 2026-09-26 audit is indexed in `app_audit_report.md`, with separate security, functional, UX, and design/accessibility reports. Findings are a snapshot of revision `12566cc`; verify whether each issue still exists before acting on it.
+- Audit evidence and screenshots are local, ignored files under `output/playwright/`. Security and state-changing reproductions used a disposable seeded copy; do not run those probes or reseed a database that must be retained. No permanent test runner was added.
+- Audit remediation tasks live in `tickets/`, grouped into `security/`, `functionality/`, `usability-ux/`, and `design-accessibility/`. Start with `tickets/README.md`; preserve finding IDs A001–A033 and update ticket/index statuses together as work is verified.
 
 ## Security & Configuration
 

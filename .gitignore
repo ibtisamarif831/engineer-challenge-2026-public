@@ -10,3 +10,6 @@ dist
 
 # Local browser verification artifacts
 output/playwright/
+
+# Local audit remediation tickets
+/tickets/

@@ -1,16 +1,18 @@
-import type { User } from '../../types'
+import type { FeedbackPriority, User } from '../../types'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 
+const priorities: FeedbackPriority[] = ['low', 'normal', 'high', 'urgent']
+
 type AssignmentFieldsProps = {
   users: User[]
   assigneeId: string
-  priority: string
+  priority: FeedbackPriority
   dueAt: string
   onAssigneeChange: (value: string) => void
-  onPriorityChange: (value: string) => void
+  onPriorityChange: (value: FeedbackPriority) => void
   onDueDateChange: (value: string) => void
   onSave: () => void
 }
@@ -33,8 +35,11 @@ export default function AssignmentFields({
           </Select>
         </Field>
         <Field label="Priority">
-          <Select value={priority} onChange={(e) => onPriorityChange(e.target.value)}>
-            {['low', 'normal', 'high', 'urgent'].map((p) => (
+          <Select value={priority} onChange={(e) => {
+            const value = priorities.find((priority) => priority === e.target.value)
+            if (value) onPriorityChange(value)
+          }}>
+            {priorities.map((p) => (
               <option key={p} value={p}>
                 {p[0].toUpperCase() + p.slice(1)}
               </option>

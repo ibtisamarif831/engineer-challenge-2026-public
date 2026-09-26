@@ -1,10 +1,13 @@
 import { API_URL, LLM_API_KEY } from './config'
-import { CustomerProfile, FeedbackItem, InternalNote, Metrics, User } from './types'
+import type {
+  AssignmentInput, CustomerProfile, FeedbackItem, InboxResponse, InternalNote,
+  LoginResponse, Metrics, NoteInput, NotesResponse, SummaryResponse, UsersResponse,
+} from './types'
 
 export async function login(
   email: string,
   password: string
-): Promise<{ token: string; user: User }> {
+): Promise<LoginResponse> {
   const res = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -21,7 +24,7 @@ export async function fetchInbox(
   status: string,
   search: string,
   token: string
-): Promise<{ items: FeedbackItem[]; total: number; page: number }> {
+): Promise<InboxResponse> {
   const res = await fetch(`${API_URL}/feedback?page=${page}&status=${status}&q=${search}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -43,7 +46,7 @@ export async function toggleResolve(id: number, token: string): Promise<Feedback
   return res.json()
 }
 
-export async function fetchUsers(token: string): Promise<{ users: User[] }> {
+export async function fetchUsers(token: string): Promise<UsersResponse> {
   const res = await fetch(`${API_URL}/users`, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -70,7 +73,7 @@ export async function fetchCustomer(id: number, token: string): Promise<Customer
 
 export async function updateAssignment(
   id: number,
-  data: { assignee_id: number | null; priority: string; due_at: string },
+  data: AssignmentInput,
   token: string
 ): Promise<FeedbackItem> {
   const res = await fetch(`${API_URL}/feedback/${id}/assignment`, {
@@ -81,10 +84,11 @@ export async function updateAssignment(
     },
     body: JSON.stringify(data),
   })
+  if (!res.ok) throw new Error('Unable to save assignment')
   return res.json()
 }
 
-export async function fetchNotes(id: number, token: string): Promise<{ notes: InternalNote[] }> {
+export async function fetchNotes(id: number, token: string): Promise<NotesResponse> {
   const res = await fetch(`${API_URL}/feedback/${id}/notes`, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -93,7 +97,7 @@ export async function fetchNotes(id: number, token: string): Promise<{ notes: In
 
 export async function addNote(
   id: number,
-  data: { body: string; is_private: boolean },
+  data: NoteInput,
   token: string
 ): Promise<InternalNote> {
   const res = await fetch(`${API_URL}/feedback/${id}/notes`, {
@@ -104,10 +108,11 @@ export async function addNote(
     },
     body: JSON.stringify(data),
   })
+  if (!res.ok) throw new Error('Unable to save note')
   return res.json()
 }
 
-export async function summarize(id: number, token: string): Promise<{ summary: string }> {
+export async function summarize(id: number, token: string): Promise<SummaryResponse> {
   const res = await fetch(`${API_URL}/summarize`, {
     method: 'POST',
     headers: {

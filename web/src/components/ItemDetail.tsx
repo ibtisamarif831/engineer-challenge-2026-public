@@ -31,7 +31,7 @@ export default function ItemDetail({
   const [notes, setNotes] = useState<InternalNote[]>([])
   const [summary, setSummary] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
-  const [priority, setPriority] = useState('normal')
+  const [priority, setPriority] = useState<FeedbackItem['priority']>('normal')
   const [dueAt, setDueAt] = useState('')
   const [noteBody, setNoteBody] = useState('')
   const [privateNote, setPrivateNote] = useState(true)

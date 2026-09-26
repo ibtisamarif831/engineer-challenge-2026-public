@@ -1,3 +1,7 @@
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export async function summarizeText(prompt: string): Promise<string> {
   if (process.env.FAKE_LLM === 'true') {
     return 'The customer shared feedback about their recent experience and is waiting on follow-up from the support team.'
@@ -17,6 +21,11 @@ export async function summarizeText(prompt: string): Promise<string> {
     }),
   })
 
-  const data: any = await response.json()
-  return data.choices[0].message.content
+  const data: unknown = await response.json()
+  if (!isObject(data) || !Array.isArray(data.choices)) throw new Error('Invalid summary response')
+  const choice: unknown = data.choices[0]
+  if (!isObject(choice) || !isObject(choice.message) || typeof choice.message.content !== 'string') {
+    throw new Error('Invalid summary response')
+  }
+  return choice.message.content
 }
