@@ -1,6 +1,8 @@
 import { ApiRequestError } from './client'
+import { ValidationError } from '../../../shared/validation'
 
 export function requestErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ValidationError) return error.message
   if (error instanceof ApiRequestError) {
     if (error.status === 401) return 'Your session has expired. Keep a copy of any unsaved text, then sign out and sign in again.'
     if (error.status === 404) return 'This record is no longer available. Return to the inbox and refresh.'

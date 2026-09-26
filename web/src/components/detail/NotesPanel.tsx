@@ -22,6 +22,7 @@ export default function NotesPanel({ notes, noteBody, privateNote, onBodyChange,
       <Field label="Note" hideLabel>
         <Textarea
           value={noteBody}
+          maxLength={10000}
           onChange={(e) => onBodyChange(e.target.value)}
           placeholder="Add context for your team…"
         />

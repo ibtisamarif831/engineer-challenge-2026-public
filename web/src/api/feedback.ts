@@ -1,5 +1,6 @@
 import { requestJson, requestBlob } from './client'
 import type { AssignmentInput, FeedbackItem, InboxResponse, InternalNote, NoteInput, NotesResponse, SummaryResponse } from '../types'
+import { parseAssignmentInput, parseNoteInput, parsePositiveId, parseSummaryInput } from '../../../shared/validation'
 
 export async function fetchInbox(
   page: number,
@@ -20,7 +21,8 @@ export async function fetchItem(id: number, token: string): Promise<FeedbackItem
 }
 
 export async function toggleResolve(id: number, token: string): Promise<FeedbackItem> {
-  return requestJson<FeedbackItem>(`/feedback/${id}/resolve`, {
+  const validatedId = parsePositiveId(id)
+  return requestJson<FeedbackItem>(`/feedback/${validatedId}/resolve`, {
     method: 'POST',
     token,
   })
@@ -38,10 +40,12 @@ export async function updateAssignment(
   data: AssignmentInput,
   token: string
 ): Promise<FeedbackItem> {
-  return requestJson<FeedbackItem>(`/feedback/${id}/assignment`, {
+  const validatedId = parsePositiveId(id)
+  const body = parseAssignmentInput(data)
+  return requestJson<FeedbackItem>(`/feedback/${validatedId}/assignment`, {
     method: 'POST',
     token,
-    body: data,
+    body,
   })
 }
 
@@ -56,17 +60,20 @@ export async function addNote(
   data: NoteInput,
   token: string
 ): Promise<InternalNote> {
-  return requestJson<InternalNote>(`/feedback/${id}/notes`, {
+  const validatedId = parsePositiveId(id)
+  const body = parseNoteInput(data)
+  return requestJson<InternalNote>(`/feedback/${validatedId}/notes`, {
     method: 'POST',
     token,
-    body: data,
+    body,
   })
 }
 
 export async function summarize(id: number, token: string): Promise<SummaryResponse> {
+  const body = parseSummaryInput({ id })
   return requestJson<SummaryResponse>('/summarize', {
     method: 'POST',
     token,
-    body: { id },
+    body,
   })
 }
