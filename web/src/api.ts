@@ -1,4 +1,4 @@
-import { API_URL, LLM_API_KEY } from './config'
+import { API_URL } from './config'
 import type {
   AssignmentInput, CustomerProfile, FeedbackItem, InboxResponse, InternalNote,
   LoginResponse, Metrics, NoteInput, NotesResponse, SummaryResponse, UsersResponse,
@@ -118,7 +118,6 @@ export async function summarize(id: number, token: string): Promise<SummaryRespo
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      'x-llm-key': LLM_API_KEY,
     },
     body: JSON.stringify({ id }),
   })

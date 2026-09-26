@@ -141,7 +141,7 @@ export default function ItemDetail({
             <PriorityBadge priority={item.priority} />
             <time className="muted" dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time>
           </div>
-          <div className="message" dangerouslySetInnerHTML={{ __html: item.message }} />
+          <div className="message feedback-text">{item.message}</div>
           <AssignmentFields
             users={users}
             assigneeId={assigneeId}
@@ -164,7 +164,7 @@ export default function ItemDetail({
           {summary && (
             <div className="summary">
               <h2>Summary</h2>
-              <div dangerouslySetInnerHTML={{ __html: summary }} />
+              <div className="feedback-text">{summary}</div>
             </div>
           )}
         </div>

@@ -39,7 +39,7 @@ export default function NotesPanel({ notes, noteBody, privateNote, onBodyChange,
               <strong>{note.author_name}</strong>
               <span>{note.is_private ? 'Private' : 'Shared'}</span>
             </div>
-            <div dangerouslySetInnerHTML={{ __html: note.body }} />
+            <div className="feedback-text">{note.body}</div>
           </article>
         ))}
       </div>

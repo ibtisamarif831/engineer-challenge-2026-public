@@ -553,14 +553,7 @@ h4 {
   line-height: var(--line-height-message);
   overflow-wrap: anywhere;
 }
-.message p + p, .summary p + p, .note p + p {
-  margin-top: var(--space-3);
-}
-.message img, .summary img, .note img {
-  max-width: 100%;
-  height: auto;
-}
-.message pre, .summary pre, .note pre {
+.feedback-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

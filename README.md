@@ -74,3 +74,9 @@ To use a real model for the Summarize feature, set the following in `server/.env
 FAKE_LLM=false
 OPENAI_API_KEY=sk-...
 ```
+
+Keep the provider key only in `server/.env`; the browser sends summary requests to the
+API without a provider key. With `FAKE_LLM=true`, summaries need no provider key.
+
+Feedback, internal notes and summaries display as plain text with line breaks preserved.
+Stored HTML, including the sample `<strong>` and `<em>` tags, is shown literally.
