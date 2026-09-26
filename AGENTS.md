@@ -31,14 +31,14 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 
 - Prefer the smallest robust solution that fixes the current problem.
 - Reuse existing patterns. Add abstractions, dependencies, infrastructure, or broad refactors only when clearly necessary.
-- Keep plans and implementations focused on the current ticket or batch. Avoid speculative requirements and production features beyond the agreed scope.
+- Keep plans and implementations focused on the current ticket. Avoid speculative requirements and production features beyond the agreed scope.
 - Verify the changed behavior with proportionate checks; introduce test infrastructure only when its benefit justifies the complexity.
 - Simplicity must still preserve essential security, correctness, and existing data.
 
 ### Coding Challenge Remediation Scope
 
-- Implement one agreed batch at a time. The security batch plan is in `tickets/security-batches.md`; related tickets may share a fix, but nearby findings do not automatically expand the batch.
-- Preserve `server/src/seed.ts`, sample credentials, seeded content, and the existing database. Do not reseed the working database or introduce data cleanup/schema migrations for these batches. Use disposable databases for mutation checks.
+- Implement only the agreed ticket scope; related tickets may share a fix, but nearby findings do not automatically expand that scope.
+- Preserve `server/src/seed.ts`, sample credentials, seeded content, and the existing database. Do not reseed the working database or introduce data cleanup/schema migrations for this remediation work. Use disposable databases for mutation checks.
 - Work with test data only for now. A004 covers credential disclosure; real-account password hashing, account migration/reset paths and credential rotation were removed from the ticket backlog at the user’s request. Do not reintroduce them without a new explicit request.
 - Keep the existing demo login and bearer-token architecture. Fix token verification, signing-key configuration, and credential disclosure without adding password hashing (including Argon2/bcrypt), registration, password reset, refresh tokens, a session service, or new role/privacy policies unless separately requested.
 - Enforce request types and referenced-record existence in the API using small helpers and parameterized SQL. Do not introduce an ORM, generic validation framework, or database-constraint migration for this scope.
@@ -57,10 +57,10 @@ Follow the existing TypeScript style: two-space indentation, single quotes, no s
 
 - Inbox pagination currently skips the first ten records (`offset = page * PAGE_SIZE` in the API) and returns an unfiltered total. Treat inaccurate page counts as an API issue, not a table styling issue.
 - Detail screens are keyed by ticket ID, focus their heading on entry, and restore the originating inbox link (or inbox heading) on return. Background polling preserves mounted rows and does not move focus. History previews use text from an inert HTML document; full feedback continues to display stored markup literally.
-- UI API failures use scoped alerts and read retries; assignment/note drafts survive request failures and status changes apply after success. Root/workspace React error boundaries provide render-crash fallbacks. Session expiry prompts manual sign-out/sign-in; complete response-shape validation and the full failure matrix remain in A015/B06.
+- UI API failures use scoped alerts and read retries; assignment/note drafts survive request failures and status changes apply after success. Root/workspace React error boundaries provide render-crash fallbacks. Session expiry prompts manual sign-out/sign-in; complete response-shape validation and the full failure matrix remain in A015.
 - Feedback, notes and summaries render as React text using `.feedback-text` for preserved whitespace and wrapping. Stored HTML is displayed literally; retain seed content. Provider keys belong only in server configuration, never browser variables or request headers.
 - Inbox polling shares the guarded load/error path and follows the current filter/search/page; previous-query responses are ignored. Complete polling/mutation synchronization and metrics refresh requirements remain tracked in A016/A017/A020.
-- The 2026-09-26 audit is indexed in `app_audit_report.md`, with separate security, functional, UX, and design/accessibility reports. Findings are a snapshot of revision `12566cc`; verify whether each issue still exists before acting on it.
+- The 2026-09-26 audit is indexed in `tickets/app_audit_report.md`, with separate security, functional, UX, and design/accessibility reports. Findings are a snapshot of revision `12566cc`; verify whether each issue still exists before acting on it.
 - Audit evidence and screenshots are local, ignored files under `output/playwright/`. Security and state-changing reproductions used a disposable seeded copy; do not run those probes or reseed a database that must be retained. No permanent test runner was added.
 - Audit remediation tasks live in `tickets/`, grouped into `security/`, `functionality/`, `usability-ux/`, and `design-accessibility/`. Start with `tickets/README.md`; preserve finding IDs A001–A033 and update ticket/index statuses together as work is verified.
 
