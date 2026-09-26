@@ -66,7 +66,8 @@ export function parseAssignmentInput(value: unknown): AssignmentInput {
   return {
     assignee_id: body.assignee_id === null ? null : bodyId(body.assignee_id, 'assignee_id'),
     priority,
-    due_at: body.due_at === null || body.due_at === '' ? body.due_at : dateValue(body.due_at, 'due_at'),
+    // Due dates are calendar dates in the business timezone, not instants.
+    due_at: body.due_at === null || body.due_at === '' ? null : dateValue(body.due_at, 'due_at').slice(0, 10),
   }
 }
 

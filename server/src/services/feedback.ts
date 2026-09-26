@@ -54,12 +54,11 @@ function filterSql(filter: FeedbackFilter) {
 
 export function listFeedback(db: DatabaseConnection, query: InboxQuery): InboxResponse {
   const { where, values } = filterSql(query)
-  // Pagination/count behavior is intentionally retained for the separate A014 fix.
-  const offset = query.page * PAGE_SIZE
+  const offset = (query.page - 1) * PAGE_SIZE
   const rows = db.prepare<(string | number)[], FeedbackRow>(
-    `SELECT f.* FROM feedback f ${where} ORDER BY f.created_at DESC LIMIT ? OFFSET ?`
+    `SELECT f.* FROM feedback f ${where} ORDER BY f.created_at DESC, f.id DESC LIMIT ? OFFSET ?`
   ).all(...values, PAGE_SIZE, offset)
-  const total = db.prepare<[], CountRow>('SELECT COUNT(*) as count FROM feedback').get()
+  const total = db.prepare<(string | number)[], CountRow>(`SELECT COUNT(*) as count FROM feedback f ${where}`).get(...values)
   if (!total) throw new Error('Missing feedback count')
   return { items: rows.map((row) => serializeFeedback(db, row)), total: total.count, page: query.page }
 }
@@ -71,7 +70,7 @@ export function assignFeedback(db: DatabaseConnection, id: number, input: Assign
   }
   db.prepare<[number | null, string, string | null, number]>(
     'UPDATE feedback SET assignee_id = ?, priority = ?, due_at = ? WHERE id = ?'
-  ).run(input.assignee_id, input.priority, input.due_at, id)
+  ).run(input.assignee_id, input.priority, input.due_at || null, id)
   return getFeedback(db, id)
 }
 

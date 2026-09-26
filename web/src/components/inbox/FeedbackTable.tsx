@@ -62,7 +62,7 @@ export default function FeedbackTable({ items, onOpen, onResolve, ticketHref }: 
                 <td>
                   <StatusBadge status={item.status} />
                 </td>
-                <td className="due">{item.due_at ? new Date(item.due_at).toLocaleDateString() : 'No due date'}</td>
+                <td className="due">{item.due_at ? item.due_at.slice(0, 10) : 'No due date'}</td>
                 <td>
                   <Button
                     variant="quiet"

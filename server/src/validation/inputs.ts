@@ -55,10 +55,12 @@ export function inboxQuery(query: Record<string, unknown>): InboxQuery {
 }
 
 export function metricsQuery(query: Record<string, unknown>): MetricsQuery {
-  return {
+  const result = {
     from: query.from === undefined ? '1970-01-01T00:00:00.000Z' : date(query.from, 'from'),
     to: query.to === undefined ? new Date().toISOString() : date(query.to, 'to'),
   }
+  if (Date.parse(result.from) > Date.parse(result.to)) throw new HttpError(400, 'from must not be after to')
+  return result
 }
 
 export function assignmentInput(value: unknown): AssignmentInput {
