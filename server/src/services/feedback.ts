@@ -1,5 +1,6 @@
 import type {
-  AssignmentInput, FeedbackFilter, FeedbackItem, InboxQuery, InboxResponse, InternalNote, NoteInput,
+  AssignmentInput, FeedbackExportQuery, FeedbackFilter, FeedbackItem, InboxQuery, InboxResponse,
+  InternalNote, NoteInput,
 } from '../../../shared/types'
 import type { CountRow, CustomerRow, DatabaseConnection, ExportRow, FeedbackRow, UserRow } from '../types/database'
 import { HttpError } from './errors'
@@ -37,9 +38,15 @@ export function getFeedback(db: DatabaseConnection, id: number): FeedbackItem {
   return serializeFeedback(db, feedbackRow(db, id))
 }
 
-function filterSql(filter: FeedbackFilter) {
+type QueryValue = string | number
+
+const listFrom = `FROM feedback f
+  JOIN customers c ON c.id = f.customer_id
+  LEFT JOIN users u ON u.id = f.assignee_id`
+
+function filterSql(filter: FeedbackFilter, ids: number[] = []) {
   const conditions: string[] = []
-  const values: string[] = []
+  const values: QueryValue[] = []
   if (filter.status !== 'all') {
     conditions.push('f.status = ?')
     values.push(filter.status)
@@ -49,16 +56,81 @@ function filterSql(filter: FeedbackFilter) {
     const pattern = `%${filter.search}%`
     values.push(pattern, pattern, pattern)
   }
+  if (filter.channel !== 'all') {
+    conditions.push('f.channel = ?')
+    values.push(filter.channel)
+  }
+  if (filter.priority !== 'all') {
+    conditions.push('f.priority = ?')
+    values.push(filter.priority)
+  }
+  if (filter.assignee === 'unassigned') {
+    conditions.push('f.assignee_id IS NULL')
+  } else if (filter.assignee !== 'all') {
+    conditions.push('f.assignee_id = ?')
+    values.push(filter.assignee)
+  }
+  if (filter.due === 'has') {
+    conditions.push('f.due_at IS NOT NULL')
+  } else if (filter.due === 'none') {
+    conditions.push('f.due_at IS NULL')
+  } else if (filter.due === 'overdue') {
+    conditions.push("f.status = 'open' AND f.due_at IS NOT NULL AND substr(f.due_at, 1, 10) < ?")
+    values.push(new Date().toISOString().slice(0, 10))
+  }
+  if (filter.due_from) {
+    conditions.push('f.due_at IS NOT NULL AND substr(f.due_at, 1, 10) >= ?')
+    values.push(filter.due_from)
+  }
+  if (filter.due_to) {
+    conditions.push('f.due_at IS NOT NULL AND substr(f.due_at, 1, 10) <= ?')
+    values.push(filter.due_to)
+  }
+  if (ids.length) {
+    conditions.push(`f.id IN (${ids.map(() => '?').join(', ')})`)
+    values.push(...ids)
+  }
   return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', values }
+}
+
+const sortExpressions: Record<InboxQuery['sort'], { asc: string; desc: string }> = {
+  customer: {
+    asc: 'LOWER(c.name) ASC',
+    desc: 'LOWER(c.name) DESC',
+  },
+  priority: {
+    asc: "CASE f.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'urgent' THEN 4 ELSE 5 END ASC",
+    desc: "CASE f.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 WHEN 'low' THEN 4 ELSE 5 END ASC",
+  },
+  owner: {
+    asc: 'CASE WHEN u.name IS NULL THEN 1 ELSE 0 END ASC, LOWER(u.name) ASC',
+    desc: 'CASE WHEN u.name IS NULL THEN 1 ELSE 0 END ASC, LOWER(u.name) DESC',
+  },
+  status: {
+    asc: "CASE f.status WHEN 'open' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END ASC",
+    desc: "CASE f.status WHEN 'resolved' THEN 1 WHEN 'open' THEN 2 ELSE 3 END ASC",
+  },
+  due: {
+    asc: 'CASE WHEN f.due_at IS NULL THEN 1 ELSE 0 END ASC, substr(f.due_at, 1, 10) ASC',
+    desc: 'CASE WHEN f.due_at IS NULL THEN 1 ELSE 0 END ASC, substr(f.due_at, 1, 10) DESC',
+  },
+  created_at: {
+    asc: 'f.created_at ASC',
+    desc: 'f.created_at DESC',
+  },
+}
+
+function orderSql(query: Pick<InboxQuery, 'sort' | 'direction'>): string {
+  return `ORDER BY ${sortExpressions[query.sort][query.direction]}, f.id DESC`
 }
 
 export function listFeedback(db: DatabaseConnection, query: InboxQuery): InboxResponse {
   const { where, values } = filterSql(query)
   const offset = (query.page - 1) * PAGE_SIZE
-  const rows = db.prepare<(string | number)[], FeedbackRow>(
-    `SELECT f.* FROM feedback f ${where} ORDER BY f.created_at DESC, f.id DESC LIMIT ? OFFSET ?`
+  const rows = db.prepare<QueryValue[], FeedbackRow>(
+    `SELECT f.* ${listFrom} ${where} ${orderSql(query)} LIMIT ? OFFSET ?`
   ).all(...values, PAGE_SIZE, offset)
-  const total = db.prepare<(string | number)[], CountRow>(`SELECT COUNT(*) as count FROM feedback f ${where}`).get(...values)
+  const total = db.prepare<QueryValue[], CountRow>(`SELECT COUNT(*) as count ${listFrom} ${where}`).get(...values)
   if (!total) throw new Error('Missing feedback count')
   return { items: rows.map((row) => serializeFeedback(db, row)), total: total.count, page: query.page }
 }
@@ -115,13 +187,13 @@ function csvCell(value: unknown): string {
   return `"${safeText.replace(/"/g, '""')}"`
 }
 
-export function exportFeedback(db: DatabaseConnection, filter: FeedbackFilter): string {
-  const { where, values } = filterSql(filter)
-  const rows = db.prepare<string[], ExportRow>(
+export function exportFeedback(db: DatabaseConnection, query: FeedbackExportQuery): string {
+  const { where, values } = filterSql(query, query.ids)
+  const rows = db.prepare<QueryValue[], ExportRow>(
     `SELECT f.*, c.name as customer_name, c.email as customer_email, c.plan, u.name as assignee_name,
       (SELECT GROUP_CONCAT(body, ' | ') FROM feedback_notes WHERE feedback_id = f.id) as internal_notes
-     FROM feedback f JOIN customers c ON c.id = f.customer_id LEFT JOIN users u ON u.id = f.assignee_id
-     ${where} ORDER BY f.created_at DESC`
+     ${listFrom}
+     ${where} ${orderSql(query)}`
   ).all(...values)
   const header = ['id', 'customer', 'email', 'plan', 'channel', 'priority', 'status', 'assignee', 'due_at', 'message', 'internal_notes']
   return [header.join(','), ...rows.map((row) => [

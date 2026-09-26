@@ -83,8 +83,15 @@ Stored HTML, including the sample `<strong>` and `<em>` tags, is shown literally
 
 ## CSV exports
 
-Export CSV downloads the current status/search selection using an authenticated request.
+Export CSV downloads the current inbox selection using an authenticated request.
+The inbox supports status, channel, priority, owner, due-date and search filters, and
+the table can export either all matching rows or the checked rows on the current page.
 Bearer tokens are sent in the Authorization header; query-string tokens are not accepted.
+
+Inbox query state is preserved in the URL with `page`, `status`, `q`, `channel`,
+`priority`, `assignee`, `due`, `due_from`, `due_to`, `sort`, and `direction`.
+Selected-row exports pass a comma-separated `ids` parameter to the authenticated
+export endpoint. There is no CSV upload/import workflow.
 
 Formula-like text (including whitespace-prefixed formulas) and text starting with control
 characters receive a leading apostrophe before normal CSV quote escaping. Ordinary text,

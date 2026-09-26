@@ -1,15 +1,31 @@
 import { requestJson, requestBlob } from './client'
-import type { AssignmentInput, FeedbackItem, InboxResponse, InternalNote, NoteInput, NotesResponse, SummaryResponse } from '../types'
+import type {
+  AssignmentInput, FeedbackExportQuery, FeedbackItem, InboxQuery, InboxResponse, InternalNote,
+  NoteInput, NotesResponse, SummaryResponse,
+} from '../types'
 import { parseAssignmentInput, parseNoteInput, parsePositiveId, parseSummaryInput } from '../../../shared/validation'
 
-export async function fetchInbox(
-  page: number,
-  status: string,
-  search: string,
-  token: string
-): Promise<InboxResponse> {
-  const query = new URLSearchParams({ page: String(page), status, q: search })
-  return requestJson<InboxResponse>(`/feedback?${query}`, {
+function inboxQueryParams(query: Omit<InboxQuery, 'page'> & { page?: number; ids?: number[] }): URLSearchParams {
+  const params = new URLSearchParams({
+    page: String(query.page || 1),
+    status: query.status,
+    q: query.search,
+    channel: query.channel,
+    priority: query.priority,
+    assignee: String(query.assignee),
+    due: query.due,
+    due_from: query.due_from,
+    due_to: query.due_to,
+    sort: query.sort,
+    direction: query.direction,
+  })
+  if (query.ids?.length) params.set('ids', query.ids.join(','))
+  return params
+}
+
+export async function fetchInbox(query: InboxQuery, token: string): Promise<InboxResponse> {
+  const params = inboxQueryParams(query)
+  return requestJson<InboxResponse>(`/feedback?${params}`, {
     token,
   })
 }
@@ -28,9 +44,10 @@ export async function toggleResolve(id: number, token: string): Promise<Feedback
   })
 }
 
-export async function exportFeedback(status: string, search: string, token: string): Promise<Blob> {
-  const query = new URLSearchParams({ status, q: search })
-  return requestBlob(`/export.csv?${query}`, {
+export async function exportFeedback(query: FeedbackExportQuery, token: string): Promise<Blob> {
+  const params = inboxQueryParams(query)
+  params.delete('page')
+  return requestBlob(`/export.csv?${params}`, {
     token,
   })
 }

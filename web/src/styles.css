@@ -406,6 +406,30 @@ h4 {
   flex-wrap: wrap;
   border-bottom: var(--border-width) solid var(--color-border);
 }
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.filter-toggle {
+  border-color: transparent;
+  background: var(--color-action-subtle);
+  color: var(--color-action);
+}
+.filter-panel {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
+}
+.filter-panel-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-error-text);
+}
 .filters {
   display: flex;
   gap: var(--space-1);
@@ -444,6 +468,40 @@ h4 {
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
 }
+.feedback-table .selection-column {
+  width: 48px;
+  padding-inline: var(--space-3);
+  text-align: center;
+}
+.table-checkbox {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin: 0;
+  accent-color: var(--color-action);
+  vertical-align: middle;
+}
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+}
+.sort-button:hover {
+  color: var(--color-action);
+}
+.sort-icon {
+  min-width: 1.25em;
+  color: var(--color-action);
+  font-size: var(--font-size-body);
+  text-align: center;
+}
 .feedback-table td {
   padding: var(--space-3) var(--space-4);
   border-top: var(--border-width) solid var(--color-border);
@@ -457,6 +515,12 @@ h4 {
 }
 .row:hover, .row:focus-within {
   background: var(--color-hover);
+}
+.row.selected {
+  background: var(--color-action-subtle);
+}
+.row.selected:hover, .row.selected:focus-within {
+  background: var(--color-action-subtle);
 }
 .ticket-button {
   border: 0;
@@ -717,6 +781,9 @@ h4 {
   .search-field {
     max-width: none;
   }
+  .filter-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 @media (max-width: 639px) {
   :root {
@@ -762,6 +829,12 @@ h4 {
   .toolbar {
     gap: var(--space-3);
   }
+  .toolbar-actions {
+    width: 100%;
+  }
+  .filter-toggle {
+    width: 100%;
+  }
   .filters {
     width: 100%;
   }
@@ -771,6 +844,12 @@ h4 {
   .search-field {
     min-width: 0;
     flex-basis: 100%;
+  }
+  .filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filter-panel .field:first-child {
+    grid-column: 1 / -1;
   }
   .export-button {
     width: 100%;

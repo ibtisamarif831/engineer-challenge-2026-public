@@ -49,11 +49,31 @@ export type Metrics = {
 
 export type FeedbackStatus = FeedbackItem['status']
 export type FeedbackPriority = FeedbackItem['priority']
+export type FeedbackChannel = 'email' | 'chat' | 'app store'
+export type FeedbackAssigneeFilter = number | 'all' | 'unassigned'
+export type FeedbackDueFilter = 'all' | 'has' | 'none' | 'overdue'
+export type InboxSortField = 'customer' | 'priority' | 'owner' | 'status' | 'due' | 'created_at'
+export type SortDirection = 'asc' | 'desc'
 export type FeedbackFilter = {
   status: FeedbackStatus | 'all'
   search: string
+  channel: FeedbackChannel | 'all'
+  priority: FeedbackPriority | 'all'
+  assignee: FeedbackAssigneeFilter
+  due: FeedbackDueFilter
+  due_from: string
+  due_to: string
 }
-export type InboxQuery = FeedbackFilter & { page: number }
+export type InboxQuery = FeedbackFilter & {
+  page: number
+  sort: InboxSortField
+  direction: SortDirection
+}
+export type FeedbackExportQuery = FeedbackFilter & {
+  ids: number[]
+  sort: InboxSortField
+  direction: SortDirection
+}
 export type MetricsQuery = { from: string; to: string }
 export type LoginInput = { email: string; password: string }
 export type AssignmentInput = {

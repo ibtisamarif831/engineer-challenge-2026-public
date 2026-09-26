@@ -1,37 +1,64 @@
 import { useEffect, useRef, useState } from 'react'
 import { exportFeedback, fetchInbox, toggleResolve } from '../api/feedback'
 import { fetchMetrics } from '../api/metrics'
-import { FeedbackItem, Metrics } from '../types'
+import { fetchUsers } from '../api/users'
+import type {
+  FeedbackAssigneeFilter, FeedbackChannel, FeedbackDueFilter, FeedbackExportQuery, FeedbackItem,
+  FeedbackPriority, FeedbackStatus, InboxQuery, InboxSortField, Metrics, SortDirection, User,
+} from '../types'
 import ItemDetail from './ItemDetail'
 import FeedbackTable from './inbox/FeedbackTable'
 import InboxToolbar from './inbox/InboxToolbar'
 import MetricsStrip from './inbox/MetricsStrip'
 import Pagination from './ui/Pagination'
-
 import ErrorNotice from './ui/ErrorNotice'
 import { requestErrorMessage } from '../api/errors'
-
-import { routeHref, useNavigation } from '../navigation/useNavigation'
+import { routeHref, useNavigation, type Route } from '../navigation/useNavigation'
 import Loader from './ui/Loader'
 
 const PAGE_SIZE = 10
 
+function inboxQuery(route: Route): InboxQuery {
+  return {
+    page: route.page,
+    status: route.status,
+    search: route.search,
+    channel: route.channel,
+    priority: route.priority,
+    assignee: route.assignee,
+    due: route.due,
+    due_from: route.dueFrom,
+    due_to: route.dueTo,
+    sort: route.sort,
+    direction: route.direction,
+  }
+}
+
+type SortableField = Exclude<InboxSortField, 'created_at'>
+
 export default function Inbox({ token }: { token: string }) {
   const [items, setItems] = useState<FeedbackItem[]>([])
   const [total, setTotal] = useState(0)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [users, setUsers] = useState<User[]>([])
   const { route, navigate } = useNavigation()
-  const { page, filter, search, ticketId: selectedId } = route
+  const {
+    page, status, search, channel, priority, assignee, due, dueFrom, dueTo, sort, direction,
+    ticketId: selectedId,
+  } = route
   const headingRef = useRef<HTMLHeadingElement>(null)
   const returnTicket = useRef<number | null>(route.returnTicket || selectedId)
   const restoreFocus = useRef(false)
   const previousTicket = useRef(selectedId)
   const previousInvalid = useRef(route.invalid)
   const loadPending = useRef(true)
+  const requestVersion = useRef(0)
   const [metrics, setMetrics] = useState<Metrics | null>(null)
   const [exportError, setExportError] = useState('')
   const [isExporting, setIsExporting] = useState(false)
 
   const [loadError, setLoadError] = useState('')
+  const [usersError, setUsersError] = useState('')
   const [metricsError, setMetricsError] = useState('')
   const [actionError, setActionError] = useState('')
   const [reload, setReload] = useState(0)
@@ -41,25 +68,45 @@ export default function Inbox({ token }: { token: string }) {
   const [resolvingId, setResolvingId] = useState<number | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+    fetchUsers(token).then((data) => {
+      if (!cancelled) {
+        setUsers(data.users)
+        setUsersError('')
+      }
+    }).catch((error: unknown) => {
+      if (!cancelled) setUsersError(requestErrorMessage(error, 'Unable to load owner options.'))
+    })
+    return () => { cancelled = true }
+  }, [token])
+
+  useEffect(() => {
     if (selectedId !== null || route.invalid) return
     let cancelled = false
-    let requestId = 0
+    const query = inboxQuery(route)
     const load = async (foreground = true) => {
-      const currentRequest = ++requestId
+      const currentRequest = ++requestVersion.current
       setLoadError('')
       loadPending.current = true
       if (foreground) setLoading(true)
       try {
-        const data = await fetchInbox(page, filter, search, token)
-        if (!cancelled && currentRequest === requestId) {
+        const data = await fetchInbox(query, token)
+        if (!cancelled && currentRequest === requestVersion.current) {
           setItems(data.items)
           setTotal(data.total)
+          setSelectedIds((current) => {
+            const visible = new Set(data.items.map((item) => item.id))
+            const next = new Set([...current].filter((id) => visible.has(id)))
+            return next.size === current.size ? current : next
+          })
           setHasLoaded(true)
         }
       } catch (error) {
-        if (!cancelled && currentRequest === requestId) setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
+        if (!cancelled && currentRequest === requestVersion.current) {
+          setLoadError(requestErrorMessage(error, 'Unable to load feedback. Please try again.'))
+        }
       } finally {
-        if (!cancelled && currentRequest === requestId) {
+        if (!cancelled && currentRequest === requestVersion.current) {
           loadPending.current = false
           setLoading(false)
         }
@@ -71,7 +118,7 @@ export default function Inbox({ token }: { token: string }) {
       cancelled = true
       clearInterval(interval)
     }
-  }, [page, filter, search, token, reload, selectedId, route.invalid])
+  }, [page, status, search, channel, priority, assignee, due, dueFrom, dueTo, sort, direction, token, reload, selectedId, route.invalid])
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +130,15 @@ export default function Inbox({ token }: { token: string }) {
     })
     return () => { cancelled = true }
   }, [token, metricsReload])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [page, status, search, channel, priority, assignee, due, dueFrom, dueTo, sort, direction])
+
+  const updateQuery = (change: Partial<Route>, replace = false) => {
+    setSelectedIds(new Set())
+    navigate({ ...route, ...change, page: 1 }, replace)
+  }
 
   const onResolve = async (item: FeedbackItem) => {
     if (resolvingId !== null) return
@@ -98,13 +154,43 @@ export default function Inbox({ token }: { token: string }) {
     }
   }
 
+  const onToggleSelection = (id: number) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const onToggleAll = () => {
+    setSelectedIds((current) => {
+      const allSelected = items.length > 0 && items.every((item) => current.has(item.id))
+      const next = new Set(current)
+      items.forEach((item) => {
+        if (allSelected) next.delete(item.id)
+        else next.add(item.id)
+      })
+      return next
+    })
+  }
+
+  const onSortChange = (field: SortableField) => {
+    const reset = route.sort === field && route.direction === 'desc'
+    const nextDirection: SortDirection = route.sort === field && route.direction === 'asc' ? 'desc' : 'asc'
+    setSelectedIds(new Set())
+    navigate({ ...route, sort: reset ? 'created_at' : field, direction: reset ? 'desc' : nextDirection, page: 1 })
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const onExport = async () => {
     setExportError('')
     setIsExporting(true)
     try {
-      const blob = await exportFeedback(filter, search, token)
+      const { page: _page, ...currentQuery } = inboxQuery(route)
+      const query: FeedbackExportQuery = { ...currentQuery, ids: [...selectedIds] }
+      const blob = await exportFeedback(query, token)
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       try {
@@ -175,14 +261,34 @@ export default function Inbox({ token }: { token: string }) {
       {metrics && <MetricsStrip metrics={metrics} />}
       <section className="panel" aria-label="Feedback inbox">
         <InboxToolbar
-          filter={filter}
+          status={status}
+          channel={channel}
+          priority={priority}
+          assignee={assignee}
+          due={due}
+          dueFrom={dueFrom}
+          dueTo={dueTo}
           search={search}
-          onFilterChange={(value) => {
-            navigate({ ...route, filter: value, page: 1 })
-          }}
-          onSearchChange={(value) => {
-            navigate({ ...route, search: value, page: 1 }, true)
-          }}
+          users={users}
+          usersError={usersError}
+          selectedCount={selectedIds.size}
+          onStatusChange={(value) => updateQuery({ status: value })}
+          onChannelChange={(value) => updateQuery({ channel: value })}
+          onPriorityChange={(value) => updateQuery({ priority: value })}
+          onAssigneeChange={(value) => updateQuery({ assignee: value })}
+          onDueChange={(value) => updateQuery({ due: value })}
+          onDueFromChange={(value) => updateQuery({ dueFrom: value })}
+          onDueToChange={(value) => updateQuery({ dueTo: value })}
+          onResetFilters={() => updateQuery({
+            status: 'all',
+            channel: 'all',
+            priority: 'all',
+            assignee: 'all',
+            due: 'all',
+            dueFrom: '',
+            dueTo: '',
+          })}
+          onSearchChange={(value) => updateQuery({ search: value }, true)}
           onExport={onExport}
           isExporting={isExporting}
         />
@@ -190,9 +296,26 @@ export default function Inbox({ token }: { token: string }) {
         <ErrorNotice message={loadError} onRetry={() => setReload((value) => value + 1)} />
         <ErrorNotice message={actionError} onRetry={() => { setActionError(''); setReload((value) => value + 1) }} />
         {loading && <Loader label={hasLoaded ? 'Refreshing feedback…' : 'Loading feedback…'} />}
-        {!loading && !loadError && <FeedbackTable items={items} onOpen={openTicket} ticketHref={ticketHref} onResolve={onResolve} resolvingId={resolvingId} />}
+        {!loading && !loadError && (
+          <FeedbackTable
+            items={items}
+            onOpen={openTicket}
+            ticketHref={ticketHref}
+            onResolve={onResolve}
+            resolvingId={resolvingId}
+            sort={sort}
+            direction={direction}
+            onSortChange={onSortChange}
+            selectedIds={selectedIds}
+            onToggleSelection={onToggleSelection}
+            onToggleAll={onToggleAll}
+          />
+        )}
       </section>
-      <Pagination page={page} totalPages={totalPages} onPageChange={(value) => navigate({ ...route, page: value })} label="Inbox pagination" />
+      <Pagination page={page} totalPages={totalPages} onPageChange={(value) => {
+        setSelectedIds(new Set())
+        navigate({ ...route, page: value })
+      }} label="Inbox pagination" />
     </div>
   )
 }

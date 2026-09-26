@@ -3,7 +3,7 @@ import type { DatabaseConnection } from '../types/database'
 import type { ApiHandler } from '../types/http'
 import * as feedback from '../services/feedback'
 import { HttpError } from '../services/errors'
-import { assignmentInput, feedbackFilter, inboxQuery, noteInput, positiveId, summaryId } from '../validation/inputs'
+import { assignmentInput, feedbackExportQuery, inboxQuery, noteInput, positiveId, summaryId } from '../validation/inputs'
 
 export function feedbackControllers(db: DatabaseConnection, summarize: (prompt: string) => Promise<string>) {
   const list: ApiHandler<InboxResponse> = (req, res) => {
@@ -34,7 +34,7 @@ export function feedbackControllers(db: DatabaseConnection, summarize: (prompt: 
     }
   }
   const exportCsv: ApiHandler<string> = (req, res) => {
-    const csv = feedback.exportFeedback(db, feedbackFilter(req.query))
+    const csv = feedback.exportFeedback(db, feedbackExportQuery(req.query))
     res.setHeader('Content-Type', 'text/csv')
     res.setHeader('Content-Disposition', 'attachment; filename="pulse-feedback-export.csv"')
     res.send(csv)
